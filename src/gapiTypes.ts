@@ -1,4 +1,5 @@
 import esri = __esri; // magic command to get ESRI JS API type definitions.
+import MapModule from './map/MapModule';
 
 // gapi loader needs to be a oneshot default due to magic (something about module load being dependant on dojo script load [waves hands, points at Aly]).
 // so putting the types here so they can be shared around
@@ -74,6 +75,9 @@ export class EsriBundle {
 // Might also make sense to have this interface in it's own file?  Its the more public of interfaces.
 export interface GeoApi {
     esriBundle?: EsriBundle;
+    maps?: MapModule;
+    dev?: any;
+
     // TODO add module names as we import them
 
     fakeNewsMaps?: any; // TODO remove after real maps are implemented

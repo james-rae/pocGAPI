@@ -1,5 +1,6 @@
 import { GeoApi, DojoWindow, EsriBundle } from './gapiTypes';
 import { FakeNewsMapModule } from './fakenewsmap';
+import MapModule from './map/MapModule';
 
 // TODO once working, try to use asynch / await keywords
 
@@ -54,6 +55,7 @@ function initAll(esriBundle: EsriBundle, window: DojoWindow): GeoApi {
 
     // access to the collection of ESRI API classes that geoApi loads for its own use
     api.esriBundle = esriBundle;
+    api.maps = new MapModule(esriBundle);
     api.fakeNewsMaps = new FakeNewsMapModule(esriBundle);
 
     // function to load ESRI API classes that geoApi does not auto-load.
@@ -63,7 +65,9 @@ function initAll(esriBundle: EsriBundle, window: DojoWindow): GeoApi {
     // e.g. [['esri/tasks/FindTask', 'findTaskClass'], ['esri/geometry/mathUtils', 'mathUtils']]
     // return value is object with properties containing the dojo classes defined in the param.
     // e.g. { findTaskClass: <FindTask Dojo Class>, mathUtils: <mathUtils Dojo Class> }
-    /* api.esriLoadApiClasses = modules => makeDojoRequests(modules, window); */
+    api.dev = {};
+    api.dev.esriLoadApiClasses = (modules: Array<Array<string>>) => makeDojoRequests(modules, window);
+    // TODO test this^. will only be called at runtime via plugins so the typescript return value on makeDojoRequests shouldn't matter (i.e. a request will have modules not in EsriBunlde def)
 
     return api;
 }
