@@ -1,4 +1,4 @@
-import { GeoApiInterface, DojoWindow, EsriBundle } from './gapitypes';
+import { GeoApi, DojoWindow, EsriBundle } from './gapiTypes';
 import { FakeNewsMapModule } from './fakenewsmap';
 
 // TODO once working, try to use asynch / await keywords
@@ -17,7 +17,7 @@ function makeDojoRequests(modules: Array<Array<string>>, window: DojoWindow): Pr
         // Dojo's require has any expectations of the scope within that function or
         // does any odd metaprogramming
         window.require(modules.map(mod => mod[0]), function () {
-            const esriBundle: EsriBundle = {};
+            const esriBundle: EsriBundle = new EsriBundle();
 
             // iterate over arguments to avoid creating an ugly giant function call
             // arguments is not an array so we do this the hard way
@@ -32,8 +32,8 @@ function makeDojoRequests(modules: Array<Array<string>>, window: DojoWindow): Pr
 }
 
 // essentially sets up the main geoApi module object and initializes all the subcomponents
-function initAll(esriBundle: EsriBundle, window: DojoWindow): GeoApiInterface {
-    const api: GeoApiInterface = {};
+function initAll(esriBundle: EsriBundle, window: DojoWindow): GeoApi {
+    const api: GeoApi = {};
     /*
     api.layer = layer(esriBundle, api);
     api.legend = legend();
@@ -68,15 +68,64 @@ function initAll(esriBundle: EsriBundle, window: DojoWindow): GeoApiInterface {
     return api;
 }
 
-export default function (esriApiUrl: string, window: DojoWindow): Promise<GeoApiInterface> {
+export default function (esriApiUrl: string, window: DojoWindow): Promise<GeoApi> {
 
     // esriDeps is an array pairing ESRI JSAPI dependencies with their imported names
     // in esriBundle
     const esriDeps: Array<Array<string>> = [
-        // TODO re-add all required libs once working
+        // TODO add 3D Map for future support?  or keep out for now to avoid extra downloads
+        // TODO validate that we are still using these in our code. Any module not being used should be removed
+
+        // TODO remove these commented things once migration is finished
+        // ['dojo/Deferred', 'Deferred'], // esri4 SHOULD be using promises instead of Deferred's now
+        // ['esri/geometry/ScreenPoint', 'ScreenPoint'], // depreciated. need to find alternative.  Possibly MapView.toScreen()
+        // ['esri/graphicsUtils', 'graphicsUtils'], // depreciated. may need to find alternative, especially for bounding box of graphics
+        // ['esri/widgets/BasemapLayer', 'BasemapLayer'], // depreciated. everything lives within Basemap now
+        // ['esri/widgets/OverviewMap', 'OverviewMap'], // depreciated. we likely need a 2nd MapView, or a separate synched map to do our overview. https://developers.arcgis.com/javascript/latest/sample-code/overview-map/index.html
+
+        ['dojo/query', 'dojoQuery'],
+        ['esri/Basemap', 'Basemap'],
+        ['esri/Color', 'Color'],
+        ['esri/config', 'esriConfig'],
+        ['esri/geometry/Extent', 'Extent'],
+        ['esri/geometry/Multipoint', 'Multipoint'],
+        ['esri/geometry/Point', 'Point'],
+        ['esri/geometry/Polygon', 'Polygon'],
+        ['esri/geometry/Polyline', 'Polyline'],
+        ['esri/geometry/SpatialReference', 'SpatialReference'],
+        ['esri/Graphic', 'Graphic'],
         ['esri/layers/FeatureLayer', 'FeatureLayer'],
+        ['esri/layers/GeoJSONLayer', 'GeoJSONLayer'],
+        ['esri/layers/GraphicsLayer', 'GraphicsLayer'],
+        ['esri/layers/ImageryLayer', 'ImageryLayer'], // formerly known as ArcGISImageServiceLayer
+        ['esri/layers/MapImageLayer', 'MapImageLayer'], // formerly known as ArcGISDynamicMapServiceLayer
+        ['esri/layers/TileLayer', 'TileLayer'], // formerly known as ArcGISTiledMapServiceLayer
+        ['esri/layers/WMSLayer', 'WmsLayer'],
+        ['esri/layers/support/ImageParameters', 'ImageParameters'],
+        ['esri/layers/support/Sublayer', 'Sublayer'], // formerly known as LayerDrawingOptions
+        ['esri/layers/support/WMSSublayer', 'WMSSublayer'], // formerly known as WMSLayerInfo
         ['esri/Map', 'Map'],
-        ['esri/views/MapView', 'MapView']
+        ['esri/renderers/ClassBreaksRenderer', 'ClassBreaksRenderer'],
+        ['esri/renderers/SimpleRenderer', 'SimpleRenderer'],
+        ['esri/renderers/UniqueValueRenderer', 'UniqueValueRenderer'],
+        ['esri/request', 'esriRequest'],
+        ['esri/symbols/PictureMarkerSymbol', 'PictureMarkerSymbol'],
+        ['esri/symbols/SimpleFillSymbol', 'SimpleFillSymbol'],
+        ['esri/symbols/SimpleLineSymbol', 'SimpleLineSymbol'],
+        ['esri/symbols/SimpleMarkerSymbol', 'SimpleMarkerSymbol'],
+        ['esri/symbols/support/jsonUtils', 'symbolJsonUtils'],
+        ['esri/tasks/GeometryService', 'GeometryService'],
+        ['esri/tasks/IdentifyTask', 'IdentifyTask'],
+        ['esri/tasks/PrintTask', 'PrintTask'],
+        ['esri/tasks/QueryTask', 'QueryTask'],
+        ['esri/tasks/support/IdentifyParameters', 'IdentifyParameters'],
+        ['esri/tasks/support/PrintParameters', 'PrintParameters'],
+        ['esri/tasks/support/PrintTemplate', 'PrintTemplate'],
+        ['esri/tasks/support/ProjectParameters', 'ProjectParameters'],
+        ['esri/tasks/support/Query', 'Query'],
+        ['esri/views/MapView', 'MapView'],
+        ['esri/widgets/BasemapGallery', 'BasemapGallery'],
+        ['esri/widgets/ScaleBar', 'ScaleBar']
     ];
 
     // the startup for this module is:

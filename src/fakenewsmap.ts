@@ -1,11 +1,11 @@
-import { GeoApiInterface, EsriBundle } from './gapitypes';
+import esri = __esri;
+import { EsriBundle } from './gapiTypes';
 
 export class FakeNewsMap {
 
     // TODO consider private?
-    // TODO change to types when figured out
-    innerMap: any;
-    innerView: any;
+    innerMap: esri.Map;
+    innerView: esri.MapView;
 
     constructor (esriBundle: EsriBundle, targetDiv: string) {
         this.innerMap = new esriBundle.Map({
@@ -33,7 +33,7 @@ export class FakeNewsMapModule {
     }
 
     makeMap(targetDiv: string): FakeNewsMap {
-        const map = new FakeNewsMap(this.esriBundle, targetDiv);
+        const map: FakeNewsMap = new FakeNewsMap(this.esriBundle, targetDiv);
         return map;
     }
 }
