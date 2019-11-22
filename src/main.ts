@@ -1,9 +1,9 @@
-import { GeoApiInterface, DojoWindow, EsriBundle } from './gapitypes';
+import { GeoApi, DojoWindow, EsriBundle } from './gapiTypes';
 import GapiLoader from './gapi';
 
-const gapiPromise: Promise<GeoApiInterface> = GapiLoader('https://js.arcgis.com/4.13', window);
+const gapiPromise: Promise<GeoApi> = GapiLoader('https://js.arcgis.com/4.13', window);
 
-gapiPromise.then((gapi: GeoApiInterface) => {
+gapiPromise.then((gapi: GeoApi) => {
   console.log('GeoAPI Loaded', gapi);
 
   const fakeMap = gapi.fakeNewsMaps.makeMap('dirtyDiv');
