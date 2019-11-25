@@ -2,8 +2,11 @@ import { GeoApi, DojoWindow, EsriBundle } from './gapiTypes';
 import { FakeNewsMapModule } from './fakenewsmap';
 import MapModule from './map/MapModule';
 
-// TODO once working, try to use asynch / await keywords
+import agol from './agol';
+import shared from './shared';
+import query from './query';
 
+// TODO once working, try to use asynch / await keywords
 
 /**
  * Invokes the dojo module loader. Loads a list of modules and returns in an object
@@ -12,11 +15,13 @@ import MapModule from './map/MapModule';
  * @return {Promise} resolves with a key-value pair object. Keys are module names. Values are the modules.
  */
 function makeDojoRequests(modules: Array<Array<string>>, window: DojoWindow): Promise<EsriBundle> {
-    return new Promise(function (resolve, reject) {
+    return new Promise((resolve, reject) => {
 
         // NOTE: do not change the callback to an arrow function since we don't know if
         // Dojo's require has any expectations of the scope within that function or
         // does any odd metaprogramming
+
+        // can't use 'arguments' if we have arrow function. so must leave it as standard notation
         window.require(modules.map(mod => mod[0]), function () {
             const esriBundle: EsriBundle = new EsriBundle();
 
@@ -44,10 +49,10 @@ function initAll(esriBundle: EsriBundle, window: DojoWindow): GeoApi {
     api.symbology = symbology(esriBundle, api, window);
     api.hilight = hilight(esriBundle, api);
     api.events = events();
+    */
     api.query = query(esriBundle);
     api.shared = shared(esriBundle);
     api.agol = agol(esriBundle);
-    */
 
     // use of the following `esri` properties/functions are unsupported by ramp team.
     // they are provided for plugin developers who want to write advanced geo functions
@@ -72,7 +77,7 @@ function initAll(esriBundle: EsriBundle, window: DojoWindow): GeoApi {
     return api;
 }
 
-export default function (esriApiUrl: string, window: DojoWindow): Promise<GeoApi> {
+export default (esriApiUrl: string, window: DojoWindow): Promise<GeoApi> => {
 
     // esriDeps is an array pairing ESRI JSAPI dependencies with their imported names
     // in esriBundle
@@ -138,7 +143,7 @@ export default function (esriApiUrl: string, window: DojoWindow): Promise<GeoApi
     // 3. initialize all of our modules
     // everything is done in an async model and the result is a promise which resolves to
     // a reference to our API
-    return new Promise(function (resolve, reject) {
+    return new Promise((resolve, reject) => {
         if (window.require) {
             console.warn('ESRI API Load Process: window.require already exists, ' +
                 'attempting to reuse existing loader with no new script tag created');
