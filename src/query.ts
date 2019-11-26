@@ -103,9 +103,9 @@ function queryGeometryBuilder(esriBundle: EsriBundle): Object {
 
                 // issue the map server query request
                 queryTask.execute(query).then(featureSet => {
-                    resolve(featureSet)
+                    resolve(featureSet);
                 }).catch(error => {
-                    reject(error)
+                    reject(error);
                 });
             } else if (isFile) {
                 // run the query on the layers internal data
@@ -351,8 +351,8 @@ class AqlLike extends AqlDiatomic {
         // REGEX FORMAT FOR %: LIKE '%/ௌ%%' ESCAPE 'ௌ', convert ௌ% to a hidden string to avoid being converted to JS regex form (.*)
         // should work for most other escape characters other than ௌ should it get changed in plugins, some exceptions for SQL meaningful characters
         if (this.escapeVal) {
-            pattern = pattern.replace(new RegExp(`${this.escapeVal}%`, 'g'), "hiddenpercent");
-            pattern = pattern.replace(new RegExp(`${this.escapeVal}_`, 'g'), "hiddenunderscore");
+            pattern = pattern.replace(new RegExp(`${this.escapeVal}%`, 'g'), 'hiddenpercent');
+            pattern = pattern.replace(new RegExp(`${this.escapeVal}_`, 'g'), 'hiddenunderscore');
         }
 
         // TODO: may or may not need a different way to handle _ in the future since it is not being used at the moment in where clauses, but this should work
@@ -364,8 +364,8 @@ class AqlLike extends AqlDiatomic {
         // convert % to *, and make pattern respect start and end of the string, also convert _ to match single character (_ not being used at the moment)
         pattern = `^${pattern.replace(/%/g, '.*')}$`.replace(/_/g, '.');
         // convert any hidden strings back to % and _
-        pattern = pattern.replace(/hiddenpercent/g, "\\\\\\%");
-        pattern = pattern.replace(/hiddenunderscore/g, "_");
+        pattern = pattern.replace(/hiddenpercent/g, '\\\\\\%');
+        pattern = pattern.replace(/hiddenunderscore/g, '_');
 
         const result = RegExp(pattern).test(newAttVal);
         return this.hasNot ? !result : result;
@@ -556,7 +556,7 @@ function sqlNodeToAqlNode (node: { type: string; }): AqlRoot {
                 return new AqlParentheses(sqlNodeToAqlNode(n.value));
             }
         }
-    }
+    };
 
     if (!typeReactor[node.type]) {
         throw new Error('Encountered unsupported query in filter. Unhandled type: ' + node.type);
@@ -697,5 +697,5 @@ export default (esriBundle: EsriBundle): Object => {
         queryIds: queryIdsBuilder(esriBundle),
         sqlAttributeFilter,
         sqlGraphicsVisibility
-    }
-}
+    };
+};

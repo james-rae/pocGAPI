@@ -111,5 +111,5 @@ export default (esriBundle: EsriBundle): Object => {
         generateUUID,
         convertImageToCanvas,
         convertImagetoDataURL
-    }
-}
+    };
+};

@@ -5,6 +5,7 @@ import MapModule from './map/MapModule';
 import agol from './agol';
 import shared from './shared';
 import query from './query';
+import events from './events';
 
 // TODO once working, try to use asynch / await keywords
 
@@ -48,8 +49,8 @@ function initAll(esriBundle: EsriBundle, window: DojoWindow): GeoApi {
     api.attribs = attribute(esriBundle, api);
     api.symbology = symbology(esriBundle, api, window);
     api.hilight = hilight(esriBundle, api);
-    api.events = events();
     */
+    api.events = events();
     api.query = query(esriBundle);
     api.shared = shared(esriBundle);
     api.agol = agol(esriBundle);
@@ -164,4 +165,4 @@ export default (esriApiUrl: string, window: DojoWindow): Promise<GeoApi> => {
         console.log('script for dojo loaded');
         return makeDojoRequests(esriDeps, window);
     }).then((esriBundle: EsriBundle) => initAll(esriBundle, window));
-}
+};

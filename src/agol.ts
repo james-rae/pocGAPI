@@ -19,7 +19,7 @@ function queryAgolItemBuilder(esriBundle: EsriBundle): Object {
                 token: token,
                 f: 'json'
             },
-            //callbackParamName: 'callback',
+            // callbackParamName: 'callback',
             responseType: 'json'
         });
 
@@ -29,7 +29,7 @@ function queryAgolItemBuilder(esriBundle: EsriBundle): Object {
                 token: token,
                 f: 'json'
             },
-            //callbackParamName: 'callback',
+            // callbackParamName: 'callback',
             responseType: 'json'
         });
 
@@ -53,7 +53,7 @@ function queryAgolItemBuilder(esriBundle: EsriBundle): Object {
                         (<any>idResult).appData = dataResult;
 
                         // request map data info
-                        id = (<any>dataResult).map.itemId
+                        id = (<any>dataResult).map.itemId;
                         const mapReq = esriBundle.esriRequest.esriRequest(`${url}sharing/rest/content/items/${id}/data`, {
                             query: {
                                 token: token,
@@ -70,7 +70,7 @@ function queryAgolItemBuilder(esriBundle: EsriBundle): Object {
                                 (<any>idResult).mapData = mapResult;
                                 resolve(idResult);
                             }
-                        })
+                        });
                     } else {
                         (<any>idResult).mapData = dataResult;
                         resolve(idResult);
@@ -84,7 +84,7 @@ function queryAgolItemBuilder(esriBundle: EsriBundle): Object {
                 reject(error);
             });
         });
-    }
+    };
 }
 
 function queryAgolTokenBuilder(esriBundle: EsriBundle): Object {
@@ -123,12 +123,12 @@ function queryAgolTokenBuilder(esriBundle: EsriBundle): Object {
                 reject(error);
             });
         });
-    }
+    };
 }
 
 export default (esriBundle: EsriBundle): Object => {
     return {
         queryItem: queryAgolItemBuilder(esriBundle),
         queryToken: queryAgolTokenBuilder(esriBundle)
-    }
-}
+    };
+};
