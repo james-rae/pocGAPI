@@ -66,9 +66,7 @@ export class EsriBundle {
     dojoQuery: dojo.query;
     esriConfig: esri.config;
     esriRequest: esri.request;
-
 }
-
 
 // TODO might be worth making this a class or a generator function with defaults.  dont know what the impact of making all properties optonal is.
 // TODO figure out best way of managing classes.  e.g. fakeNewsMaps needs to import that file, but that file imports this.
@@ -77,6 +75,10 @@ export interface GeoApi {
     esriBundle?: EsriBundle;
     maps?: MapModule;
     dev?: any;
+    agol?: any;
+    shared?: any;
+    query?: any;
+    events?: any;
 
     // TODO add module names as we import them
 
