@@ -3,18 +3,18 @@
 // TODO add proper comments
 
 import esri = __esri;
-import { EsriBundle } from '../gapiTypes';
+import { EsriBundle, InfoBundle } from '../gapiTypes';
 import MapBase from './MapBase';
 
 export class Map3D extends MapBase {
 
     innerView: esri.SceneView;
 
-    constructor (esriBundle: EsriBundle, config: any, targetDiv: string) {
+    constructor (infoBundle: InfoBundle, config: any, targetDiv: string) {
         // TODO massage incoming config to something that conforms to esri.MapProperties interface
         const esriConfig = config; // this becomes real logic
 
-        super(esriBundle, esriConfig)
+        super(infoBundle, esriConfig)
 
         // TODO extract more from config and set appropriate view properties (e.g. intial extent, initial projection, LODs)
         /* // need to add SceneView to our bundle for this to work. later!

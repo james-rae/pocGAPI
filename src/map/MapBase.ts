@@ -4,17 +4,17 @@
 // TODO add proper comments
 
 import esri = __esri;
-import { EsriBundle } from '../gapiTypes';
+import { EsriBundle, InfoBundle, GeoApi } from '../gapiTypes';
+import BaseBase from '../BaseBase';
 
-export default class MapBase {
+export default class MapBase extends BaseBase {
 
-    // TODO consider private?
+    // TODO think about how to expose. protected makes sense, but might want to make it public to allow hacking and use by a dev module if we decide to
     innerMap: esri.Map;
-    readonly esriBundle: EsriBundle; // is there a way to make a property only visible to class and it's inheritors? private means inheritor can't see it.  I'd like Map to use this internally, but no myMap.esriBundle to be allowed.
 
-    constructor (esriBundle: EsriBundle, config: esri.MapProperties) {
-        this.esriBundle = esriBundle;
-        this.innerMap = new esriBundle.Map(config);
+    protected constructor (infoBundle: InfoBundle, config: esri.MapProperties) {
+        super(infoBundle);
+        this.innerMap = new this.esriBundle.Map(config);
 
     }
 

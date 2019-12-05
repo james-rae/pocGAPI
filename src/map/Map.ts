@@ -3,21 +3,23 @@
 
 
 import esri = __esri;
-import { EsriBundle } from '../gapiTypes';
+import { EsriBundle, InfoBundle } from '../gapiTypes';
 import MapBase from './MapBase';
+import LayerBase from '../layer/LayerBase';
 
 export default class Map extends MapBase {
 
+    // TODO think about how to expose. protected makes sense, but might want to make it public to allow hacking and use by a dev module if we decide to
     innerView: esri.MapView;
 
-    constructor (esriBundle: EsriBundle, config: any, targetDiv: string) {
+    constructor (infoBundle: InfoBundle, config: any, targetDiv: string) {
         // TODO massage incoming config to something that conforms to esri.MapProperties interface
         const esriConfig = config; // this becomes real logic
 
-        super(esriBundle, esriConfig);
+        super(infoBundle, esriConfig);
 
         // TODO extract more from config and set appropriate view properties (e.g. intial extent, initial projection, LODs)
-        this.innerView = new esriBundle.MapView({
+        this.innerView = new this.esriBundle.MapView({
             map: this.innerMap,
             container: targetDiv,
             center: [-76.772, 44.423],
@@ -26,8 +28,8 @@ export default class Map extends MapBase {
     }
 
     // TODO implement
-    addLayer (): void {
-
+    addLayer (layer: LayerBase): void {
+        this.innerMap.add(layer.innerLayer);
     }
 
     // TODO passthrough functions, either by aly magic or make them hardcoded

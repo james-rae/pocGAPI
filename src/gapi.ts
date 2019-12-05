@@ -1,4 +1,4 @@
-import { GeoApi, DojoWindow, EsriBundle } from './gapiTypes';
+import { GeoApi, DojoWindow, EsriBundle, InfoBundle } from './gapiTypes';
 import { FakeNewsMapModule } from './fakenewsmap';
 import MapModule from './map/MapModule';
 
@@ -42,6 +42,11 @@ function makeDojoRequests(modules: Array<Array<string>>, window: DojoWindow): Pr
 // essentially sets up the main geoApi module object and initializes all the subcomponents
 function initAll(esriBundle: EsriBundle, window: DojoWindow): GeoApi {
     const api: GeoApi = {};
+    const infoBundle: InfoBundle = {
+        api,
+        esriBundle
+    };
+
     /*
     api.layer = layer(esriBundle, api);
     api.legend = legend();
@@ -62,7 +67,7 @@ function initAll(esriBundle: EsriBundle, window: DojoWindow): GeoApi {
 
     // access to the collection of ESRI API classes that geoApi loads for its own use
     api.esriBundle = esriBundle;
-    api.maps = new MapModule(esriBundle);
+    api.maps = new MapModule(infoBundle);
     api.fakeNewsMaps = new FakeNewsMapModule(esriBundle);
 
     // function to load ESRI API classes that geoApi does not auto-load.

@@ -85,3 +85,9 @@ export interface GeoApi {
 
     fakeNewsMaps?: any; // TODO remove after real maps are implemented
 }
+
+// used to pass reference information into class constructors. saves us from having two parameters. value!
+export interface InfoBundle {
+    esriBundle: EsriBundle;
+    api: GeoApi;
+}

@@ -7,5 +7,6 @@ gapiPromise.then((gapi: GeoApi) => {
   console.log('GeoAPI Loaded', gapi);
 
   const fakeMap = gapi.fakeNewsMaps.makeMap('dirtyDiv');
+  // fakeMap.addLayer();
 
 });
