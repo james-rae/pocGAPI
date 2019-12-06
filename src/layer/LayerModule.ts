@@ -9,20 +9,15 @@ import FeatureLayer from './FeatureLayer';
 
 export default class LayerModule extends BaseBase {
 
-    private readonly infoBundle: InfoBundle;
-
     constructor (infoBundle: InfoBundle) {
         super(infoBundle);
-
-        this.infoBundle = infoBundle; // redundant, but since we're passing this to new classes in all the constructors, saves some typing
-
     }
 
     // TODO make create layer set of functions
     // specific ones, maybe a string-driven one
 
     createFeatureLayer(config: any): FeatureLayer {
-        const l = new FeatureLayer(this.infoBundle, config);
+        const l = new FeatureLayer(this.infoBundle(), config);
         return l;
     }
 

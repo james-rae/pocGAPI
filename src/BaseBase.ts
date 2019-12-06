@@ -1,5 +1,6 @@
 // put things here that would be common to all/most geoapi objects.
 // mainly utilitiy links to make stuff easy to code
+// TODO add proper documentation
 
 import { EsriBundle, InfoBundle, GeoApi } from './gapiTypes';
 
@@ -14,5 +15,24 @@ export default class BaseBase {
     protected constructor (infoBundle: InfoBundle) {
         this.esriBundle = infoBundle.esriBundle;
         this.gapi = infoBundle.api;
+    }
+
+    // helper function for when classes want to spawn another class, and need to pass an infobundle
+    protected infoBundle(): InfoBundle {
+        return {
+            esriBundle: this.esriBundle,
+            api: this.gapi
+        };
+    }
+
+    /**
+     * Undefined checker, best function ever
+     *
+     * @param varr what you want to check
+     * @returns {boolean} if the thing is undefined
+     */
+    protected isUn(varr: any): boolean {
+        // i make a function cause i hate typing this statement
+        return typeof varr === 'undefined';
     }
 }

@@ -8,16 +8,13 @@ import BaseBase from '../BaseBase';
 
 export default class MapModule extends BaseBase {
 
-    private readonly infoBundle: InfoBundle;
-
     constructor (infoBundle: InfoBundle) {
         super(infoBundle);
-        this.infoBundle = infoBundle; // redundant, but since we're passing this to new classes in all the constructors, saves some typing
     }
 
     // TODO will we have a config type? is it bad to have something that is defined on the client be defined here?
     createMap(config: any, targetDiv: string): Map {
-        const map: Map = new Map(this.infoBundle, config, targetDiv);
+        const map: Map = new Map(this.infoBundle(), config, targetDiv);
         return map;
     }
 

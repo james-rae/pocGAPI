@@ -7,6 +7,7 @@ import esri = __esri;
 import { EsriBundle, InfoBundle, GeoApi } from '../gapiTypes';
 import BaseBase from '../BaseBase';
 
+// TODO would ideally call this BaseMap, but that would get confused with Basemap.
 export default class MapBase extends BaseBase {
 
     // TODO think about how to expose. protected makes sense, but might want to make it public to allow hacking and use by a dev module if we decide to

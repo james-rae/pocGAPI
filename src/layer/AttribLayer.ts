@@ -4,18 +4,16 @@
 
 import esri = __esri;
 import { EsriBundle, InfoBundle } from '../gapiTypes';
-import LayerBase from './LayerBase';
+import BaseLayer from './BaseLayer';
 
-export default class AttribLayer extends LayerBase {
+export default class AttribLayer extends BaseLayer {
 
     innerView: esri.MapView;
 
     // TODO type the config?
     constructor (infoBundle: InfoBundle, config: any) {
-        // TODO massage incoming config to something that conforms to esri.MapProperties interface
-        const esriConfig = config; // this becomes real logic
 
-        super(infoBundle);
+        super(infoBundle, config);
 
     }
 

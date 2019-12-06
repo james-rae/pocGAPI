@@ -5,7 +5,7 @@
 import esri = __esri;
 import { EsriBundle, InfoBundle } from '../gapiTypes';
 import MapBase from './MapBase';
-import LayerBase from '../layer/LayerBase';
+import LayerBase from '../layer/BaseLayer';
 
 export default class Map extends MapBase {
 

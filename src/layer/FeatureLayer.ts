@@ -2,8 +2,9 @@
 
 
 import esri = __esri;
-import { EsriBundle, InfoBundle } from '../gapiTypes';
+import { EsriBundle, InfoBundle, LayerState } from '../gapiTypes';
 import AttribLayer from './AttribLayer';
+import AttribFC from './AttribFC';
 
 export default class FeatureLayer extends AttribLayer {
 
@@ -39,6 +40,180 @@ export default class FeatureLayer extends AttribLayer {
             esriConfig.definitionExpression = rampLayerConfig.initialFilteredQuery;
         }
         return esriConfig;
+    }
+
+    /**
+     * Triggers when the layer loads.
+     *
+     * @function onLoad
+     */
+    onLoad (): Array<Promise<void>> {
+        const loadPromises: Array<Promise<void>> = super.onLoad();
+
+        // we run into a lot of funny business with functions/constructors modifying parameters.
+        // this essentially clones an object to protect original objects against trickery.
+        const jsonCloner = (inputObject: any) => {
+            return JSON.parse(JSON.stringify(inputObject));
+        };
+
+        // attempt to set custom renderer here. if fails, we can attempt on client but prefer it here
+        // as this doesnt care where the layer came from
+        if (this.origRampConfig.customRenderer.type) {
+            // TODO implement custom renderers
+            /*
+            // all renderers have a type field. if it's missing, no renderer was provided, or its garbage
+            const classMapper = {
+                simple: this._apiRef.symbology.SimpleRenderer,
+                classBreaks: this._apiRef.symbology.ClassBreaksRenderer,
+                uniqueValue: this._apiRef.symbology.UniqueValueRenderer
+            }
+
+            // renderer constructors apparently convert their input json from server style to client style.
+            // we dont want that. use a clone to protect config's property.
+            const cloneRenderer = jsonCloner(this.config.customRenderer);
+            const custRend = classMapper[cloneRenderer.type](cloneRenderer);
+            this._layer.setRenderer(custRend);
+            */
+        }
+
+        // get attribute package
+
+        // TODO implement the package. we probably want to refactor this so everything is defined in layers (AttribFC seems good target)
+        //      and loading attributes is a call to attribute module
+        /*
+        let attribPackage;
+        let featIdx;
+        if (this.dataSource() !== shared.dataSources.ESRI) {
+            featIdx = '0';
+            attribPackage = this._apiRef.attribs.loadFileAttribs(this._layer);
+        } else {
+            const splitUrl = shared.parseUrlIndex(this._layer.url);
+            featIdx = splitUrl.index;
+            this.rootUrl = splitUrl.rootUrl;
+
+            // methods in the attrib loader will update our copy of the renderer. if we pass in the config reference, it gets
+            // updated and some weird stuff happens. Make a copy.
+            const cloneRenderer = jsonCloner(this.config.customRenderer);
+            attribPackage = this._apiRef.attribs.loadServerAttribs(splitUrl.rootUrl, featIdx, this.config.outfields,
+                cloneRenderer);
+        }
+        */
+
+        // HACK lazy url extraction for now. remove when above code block is implemented. parseUrlIndex should go in some util module of this.api
+        /**
+         * Splits an indexed map server url into an object with .rootUrl and .index
+         * properties.
+         *
+         * @function parseUrlIndex
+         * @param  {String} url    an indexed map server url
+         * @returns {Object}  the url split into the server root and the index.
+         */
+        const parseUrlIndex = (url) => {
+            // break url into root and index
+
+            // note we are returning index as a string for now.
+            const result = {
+                rootUrl: url,
+                index: '0'
+            };
+            const re = /\/(\d+)\/?$/;
+            const matches = url.match(re);
+
+            if (matches) {
+                result.index = matches[1];
+                result.rootUrl = url.substr(0, url.length - matches[0].length); // will drop trailing slash
+            } else {
+                // give up, dont crash with error.
+                // default configuration will make sense for non-feature urls,
+                // even though they should not be using this.
+                console.warn('Cannot extract layer index from url ' + url);
+            }
+
+            return result;
+        };
+        const featIdx: number = parseInt(parseUrlIndex((<esri.FeatureLayer>this.innerLayer).url).index);
+
+        // END HACK
+
+        // feature has only one layer
+        const aFC = new AttribFC(this.infoBundle(), this, featIdx);
+        this.fcs[featIdx] = aFC;
+
+        // TODO implement symbology load
+        // const pLS = aFC.loadSymbology();
+
+        // update asynch data
+        // TODO do all this lol
+        /*
+        const pLD = aFC.getLayerData().then(ld => {
+            aFC.geomType = ld.geometryType;
+            aFC.oidField = ld.oidField;
+            aFC.nameField = this.config.nameField || ld.nameField || '';
+            aFC.tooltipField = this.config.tooltipField || aFC.nameField;
+
+            // check the config for any custom field aliases, and add the alias as a property if it exists
+            if (this.config.source.fieldMetadata) {
+                ld.fields.forEach(field => {
+                    const clientAlias = this.config.source.fieldMetadata.find(f => f.data === field.name);
+                    field.clientAlias = clientAlias ? clientAlias.alias : undefined;
+                });
+            }
+
+            // trickery. file layer can have field names that are bad keys.
+            // our file loader will have corrected them, but config.nameField and config.tooltipField will have
+            // been supplied from the wizard (it pre-fetches fields to present a choice
+            // to the user). If the nameField / tooltipField was adjusted for bad characters, we need to
+            // re-synchronize it here.
+            if (this.dataSource() !== shared.dataSources.ESRI) {
+                if (ld.fields.findIndex(f => f.name === aFC.nameField) === -1) {
+                    const validField = ld.fields.find(f => f.alias === aFC.nameField);
+                    if (validField) {
+                        aFC.nameField = validField.name;
+                        if (!this.config.tooltipField) {    // tooltipField wasn't explicitly provided, so it was also using the bad nameField key
+                            aFC.tooltipField = validField.name
+                        }
+                    } else {
+                        // give warning. impact is tooltips will have no text, details pane no header
+                        console.warn(`Cannot find name field in layer field list: ${aFC.nameField}`);
+                    }
+                }
+
+                // only check the tooltipField if it was provided from the config, otherwise it would have been corrected above already (if required)
+                if (this.config.tooltipField && ld.fields.findIndex(f => f.name === aFC.tooltipField) === -1) {
+                    const validField = ld.fields.find(f => f.alias === aFC.tooltipField);
+                    if (validField) {
+                        aFC.tooltipField = validField.name;
+                    } else {
+                        // give warning. impact is tooltips will have no text, details pane no header
+                        console.warn(`Cannot find name field in layer field list: ${aFC.tooltipField}`);
+                    }
+                }
+            }
+        });
+        */
+
+        // TODO implement feature count
+        /*
+        const pFC = this.getFeatureCount().then(fc => {
+            this._fcount = fc;
+        });
+        */
+
+        // if file based (or server extent was fried), calculate extent based on geometry
+        // TODO implement this. may need a manual loop to calculate graphicsExtent since ESRI torpedo'd the function
+        /*
+        if (!this.extent || !this.extent.xmin) {
+            this.extent = this._apiRef.proj.graphicsUtils.graphicsExtent(this._layer.graphics);
+        }
+        */
+
+        // TODO add back in promises
+        // loadPromises.push(pLD, pFC, pLS);
+        Promise.all(loadPromises).then(() => {
+            this.stateChanged.fireEvent(LayerState.LOADED);
+        });
+
+        return loadPromises;
     }
 
 }
