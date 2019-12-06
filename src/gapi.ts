@@ -7,6 +7,7 @@ import shared from './shared';
 import query from './query';
 import events from './events';
 import highlight from './highlight';
+import LayerModule from './layer/LayerModule';
 
 // TODO once working, try to use asynch / await keywords
 
@@ -68,6 +69,7 @@ function initAll(esriBundle: EsriBundle, window: DojoWindow): GeoApi {
     // access to the collection of ESRI API classes that geoApi loads for its own use
     api.esriBundle = esriBundle;
     api.maps = new MapModule(infoBundle);
+    api.layers = new LayerModule(infoBundle);
     api.fakeNewsMaps = new FakeNewsMapModule(esriBundle);
 
     // function to load ESRI API classes that geoApi does not auto-load.

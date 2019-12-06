@@ -9,15 +9,15 @@ export default class FeatureLayer extends AttribLayer {
 
     innerView: esri.MapView;
 
-    constructor (infoBundle: InfoBundle, config: any, targetDiv: string) {
-        // TODO massage incoming config to something that conforms to esri.MapProperties interface
+    constructor (infoBundle: InfoBundle, config: any) {
+
         const esriConfig = config; // this becomes real logic
 
         super(infoBundle, esriConfig);
 
         this.innerLayer = new this.esriBundle.FeatureLayer(this.makeEsriLayerConfig(config));
 
-        this.initLayer(this.innerLayer);
+        this.initLayer();
 
     }
 

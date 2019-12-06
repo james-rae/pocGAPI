@@ -15,7 +15,7 @@ export default class AttribLayer extends LayerBase {
         // TODO massage incoming config to something that conforms to esri.MapProperties interface
         const esriConfig = config; // this becomes real logic
 
-        super(infoBundle, esriConfig);
+        super(infoBundle);
 
     }
 

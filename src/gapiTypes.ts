@@ -1,5 +1,6 @@
 import esri = __esri; // magic command to get ESRI JS API type definitions.
 import MapModule from './map/MapModule';
+import LayerModule from './layer/LayerModule';
 
 // gapi loader needs to be a oneshot default due to magic (something about module load being dependant on dojo script load [waves hands, points at Aly]).
 // so putting the types here so they can be shared around
@@ -72,8 +73,9 @@ export class EsriBundle {
 // TODO figure out best way of managing classes.  e.g. fakeNewsMaps needs to import that file, but that file imports this.
 // Might also make sense to have this interface in it's own file?  Its the more public of interfaces.
 export interface GeoApi {
-    esriBundle?: EsriBundle;
+    esriBundle?: EsriBundle; // push inside a dev module?
     maps?: MapModule;
+    layers?: LayerModule;
     dev?: any;
     agol?: any;
     shared?: any;
@@ -91,3 +93,11 @@ export interface InfoBundle {
     esriBundle: EsriBundle;
     api: GeoApi;
 }
+
+export enum LayerState { // these are used as css classes; hence the `rv` prefix
+    NEW = 'rv-new',
+    REFRESH = 'rv-refresh',
+    LOADING = 'rv-loading',
+    LOADED = 'rv-loaded',
+    ERROR = 'rv-error'
+};
