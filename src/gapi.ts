@@ -6,6 +6,7 @@ import agol from './agol';
 import shared from './shared';
 import query from './query';
 import events from './events';
+import highlight from './highlight';
 
 // TODO once working, try to use asynch / await keywords
 
@@ -48,8 +49,8 @@ function initAll(esriBundle: EsriBundle, window: DojoWindow): GeoApi {
     api.Map = esriMap(esriBundle, api);
     api.attribs = attribute(esriBundle, api);
     api.symbology = symbology(esriBundle, api, window);
-    api.hilight = hilight(esriBundle, api);
     */
+    api.highlight = highlight(esriBundle, api);
     api.events = events();
     api.query = query(esriBundle);
     api.shared = shared(esriBundle);
@@ -78,7 +79,7 @@ function initAll(esriBundle: EsriBundle, window: DojoWindow): GeoApi {
     return api;
 }
 
-export default (esriApiUrl: string, window: DojoWindow): Promise<GeoApi> => {
+export default async (esriApiUrl: string, window: DojoWindow): Promise<GeoApi> => {
 
     // esriDeps is an array pairing ESRI JSAPI dependencies with their imported names
     // in esriBundle
@@ -144,25 +145,23 @@ export default (esriApiUrl: string, window: DojoWindow): Promise<GeoApi> => {
     // 3. initialize all of our modules
     // everything is done in an async model and the result is a promise which resolves to
     // a reference to our API
-    return new Promise((resolve, reject) => {
+    await new Promise((resolve, reject) => {
         if (window.require) {
             console.warn('ESRI API Load Process: window.require already exists, ' +
                 'attempting to reuse existing loader with no new script tag created');
             resolve();
             return;
         }
-
         // TODO try to add types, if we care.
         const oScript = window.document.createElement('script');
         const oHead = window.document.head || window.document.getElementsByTagName('head')[0];
-
         oScript.type = 'text\/javascript';
         oScript.onerror = (err: any) => reject(err);
         oScript.onload = () => resolve();
         oHead.appendChild(oScript);
         oScript.src = esriApiUrl; // '//ec.cloudapp.net/~aly/esri/dojo/dojo.js';
-    }).then(() => {
-        console.log('script for dojo loaded');
-        return makeDojoRequests(esriDeps, window);
-    }).then((esriBundle: EsriBundle) => initAll(esriBundle, window));
+    });
+    console.log('script for dojo loaded');
+    const esriBundle = await makeDojoRequests(esriDeps, window);
+    return initAll(esriBundle, window);
 };

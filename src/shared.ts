@@ -1,3 +1,5 @@
+import esri = __esri;
+
 import { EsriBundle } from './gapiTypes';
 
 function getLayerTypeBuilder(esriBundle: EsriBundle): Object {
@@ -7,7 +9,7 @@ function getLayerTypeBuilder(esriBundle: EsriBundle): Object {
      * @param  {Object} layer an ESRI API layer object
      * @return {String} layer type
      */
-    return (layer: any): string => {
+    return (layer: esri.Layer): string => {
         if (layer instanceof esriBundle.FeatureLayer) {
             return 'FeatureLayer';
         } else if (layer instanceof esriBundle.WMSLayer) {
