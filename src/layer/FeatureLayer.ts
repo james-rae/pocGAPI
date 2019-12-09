@@ -2,9 +2,10 @@
 
 
 import esri = __esri;
-import { EsriBundle, InfoBundle, LayerState } from '../gapiTypes';
+import { EsriBundle, InfoBundle, LayerState, RampLayerConfig } from '../gapiTypes';
 import AttribLayer from './AttribLayer';
 import AttribFC from './AttribFC';
+import TreeNode from './TreeNode';
 
 export default class FeatureLayer extends AttribLayer {
 
@@ -28,7 +29,7 @@ export default class FeatureLayer extends AttribLayer {
      * @param rampLayerConfig snippet from RAMP for this layer
      * @returns configuration object for the ESRI layer representing this layer
      */
-    protected makeEsriLayerConfig(rampLayerConfig: any): esri.FeatureLayerProperties {
+    protected makeEsriLayerConfig(rampLayerConfig: RampLayerConfig): esri.FeatureLayerProperties {
         // TODO flush out
         // NOTE: it would be nice to put esri.LayerProperties as the return type, but since we are cheating with refreshInterval it wont work
         //       we can make our own interface if it needs to happen (or can extent the esri one)
@@ -99,45 +100,12 @@ export default class FeatureLayer extends AttribLayer {
         }
         */
 
-        // HACK lazy url extraction for now. remove when above code block is implemented. parseUrlIndex should go in some util module of this.api
-        /**
-         * Splits an indexed map server url into an object with .rootUrl and .index
-         * properties.
-         *
-         * @function parseUrlIndex
-         * @param  {String} url    an indexed map server url
-         * @returns {Object}  the url split into the server root and the index.
-         */
-        const parseUrlIndex = (url) => {
-            // break url into root and index
-
-            // note we are returning index as a string for now.
-            const result = {
-                rootUrl: url,
-                index: '0'
-            };
-            const re = /\/(\d+)\/?$/;
-            const matches = url.match(re);
-
-            if (matches) {
-                result.index = matches[1];
-                result.rootUrl = url.substr(0, url.length - matches[0].length); // will drop trailing slash
-            } else {
-                // give up, dont crash with error.
-                // default configuration will make sense for non-feature urls,
-                // even though they should not be using this.
-                console.warn('Cannot extract layer index from url ' + url);
-            }
-
-            return result;
-        };
-        const featIdx: number = parseInt(parseUrlIndex((<esri.FeatureLayer>this.innerLayer).url).index);
-
-        // END HACK
+        const featIdx: number =  this.gapi.utils.shared.parseUrlIndex((<esri.FeatureLayer>this.innerLayer).url).index;
 
         // feature has only one layer
         const aFC = new AttribFC(this.infoBundle(), this, featIdx);
         this.fcs[featIdx] = aFC;
+        this.layerTree = new TreeNode(featIdx, this.name); // TODO verify name is populated at this point
 
         // TODO implement symbology load
         // const pLS = aFC.loadSymbology();
@@ -211,6 +179,7 @@ export default class FeatureLayer extends AttribLayer {
         // loadPromises.push(pLD, pFC, pLS);
         Promise.all(loadPromises).then(() => {
             this.stateChanged.fireEvent(LayerState.LOADED);
+            this.loadProimse.resolveMe();
         });
 
         return loadPromises;

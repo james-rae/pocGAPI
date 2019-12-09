@@ -3,6 +3,8 @@ import { EsriBundle, GeoApi } from './gapiTypes';
 
 // TODO highlight layer would be a good candidate for a custom class which internally proxies to ESRI's GraphicsLayer.
 
+// TODO consider splitting the layer and the logic to separate files
+
 import defaultSymbols from './defaulthighlightSymbols.json';
 
 // contains functions to support the highlight layer.

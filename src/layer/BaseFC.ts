@@ -5,12 +5,14 @@ import esri = __esri;
 import { EsriBundle, InfoBundle } from '../gapiTypes';
 import BaseBase from '../BaseBase';
 import BaseLayer from './BaseLayer';
+import ScaleSet from './ScaleSet';
 
 export default class BaseFC extends BaseBase {
 
     protected parentLayer: BaseLayer;
     layerIdx: number; // final name TBD
     name: string;
+    scaleSet: ScaleSet;
 
     constructor (infoBundle: InfoBundle, parent: BaseLayer, layerIdx: number = 0) {
 

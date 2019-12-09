@@ -11,6 +11,7 @@ export default class AttribLayer extends BaseLayer {
     innerView: esri.MapView;
 
     // TODO type the config?
+    // TODO make this protected? is it possible to instatiate a raw AttribLayer?
     constructor (infoBundle: InfoBundle, config: any) {
 
         super(infoBundle, config);

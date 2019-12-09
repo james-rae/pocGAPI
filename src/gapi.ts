@@ -2,12 +2,12 @@ import { GeoApi, DojoWindow, EsriBundle, InfoBundle } from './gapiTypes';
 import { FakeNewsMapModule } from './fakenewsmap';
 import MapModule from './map/MapModule';
 
-import agol from './agol';
-import shared from './shared';
-import query from './query';
+import agol from './util/agol';
+import query from './util/query';
 import events from './events';
 import highlight from './highlight';
 import LayerModule from './layer/LayerModule';
+import UtilModule from './util/UtilModule';
 
 // TODO once working, try to use asynch / await keywords
 
@@ -42,7 +42,14 @@ function makeDojoRequests(modules: Array<Array<string>>, window: DojoWindow): Pr
 
 // essentially sets up the main geoApi module object and initializes all the subcomponents
 function initAll(esriBundle: EsriBundle, window: DojoWindow): GeoApi {
-    const api: GeoApi = {};
+    // make explicit object to avoid the question marks in the definition
+    const api: GeoApi = {
+        esriBundle: undefined,
+        maps: undefined,
+        layers: undefined,
+        utils: undefined,
+        fakeNewsMaps: undefined // TODO remove
+    };
     const infoBundle: InfoBundle = {
         api,
         esriBundle
@@ -59,7 +66,6 @@ function initAll(esriBundle: EsriBundle, window: DojoWindow): GeoApi {
     api.highlight = highlight(esriBundle, api);
     api.events = events();
     api.query = query(esriBundle);
-    api.shared = shared(esriBundle);
     api.agol = agol(esriBundle);
 
     // use of the following `esri` properties/functions are unsupported by ramp team.
@@ -70,7 +76,8 @@ function initAll(esriBundle: EsriBundle, window: DojoWindow): GeoApi {
     api.esriBundle = esriBundle;
     api.maps = new MapModule(infoBundle);
     api.layers = new LayerModule(infoBundle);
-    api.fakeNewsMaps = new FakeNewsMapModule(esriBundle);
+    api.utils = new UtilModule(infoBundle);
+    api.fakeNewsMaps = new FakeNewsMapModule(esriBundle); // TODO rem9ove me
 
     // function to load ESRI API classes that geoApi does not auto-load.
     // param `modules` is an array of arrays, the inner arrays are 2-element consisting

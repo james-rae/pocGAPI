@@ -1,6 +1,10 @@
+// TODO add proper comments
+// TODO after all the stuff has been dumped in here, re-organize the order into logical sections
+
 import esri = __esri; // magic command to get ESRI JS API type definitions.
 import MapModule from './map/MapModule';
 import LayerModule from './layer/LayerModule';
+import UtilModule from './util/UtilModule';
 
 // gapi loader needs to be a oneshot default due to magic (something about module load being dependant on dojo script load [waves hands, points at Aly]).
 // so putting the types here so they can be shared around
@@ -73,9 +77,10 @@ export class EsriBundle {
 // TODO figure out best way of managing classes.  e.g. fakeNewsMaps needs to import that file, but that file imports this.
 // Might also make sense to have this interface in it's own file?  Its the more public of interfaces.
 export interface GeoApi {
-    esriBundle?: EsriBundle; // push inside a dev module?
-    maps?: MapModule;
-    layers?: LayerModule;
+    esriBundle: EsriBundle; // push inside a dev module?
+    maps: MapModule;
+    layers: LayerModule;
+    utils: UtilModule;
     dev?: any;
     agol?: any;
     shared?: any;
@@ -100,4 +105,39 @@ export enum LayerState { // these are used as css classes; hence the `rv` prefix
     LOADING = 'rv-loading',
     LOADED = 'rv-loaded',
     ERROR = 'rv-error'
-};
+}
+
+// an object that is passed into the asynch attribute loader. the loader can read and update these properties on each iteration
+export class AsynchAttribController {
+    loadedCount: number;
+    loadAbortFlag: boolean;
+
+    constructor() {
+        this.loadedCount = 0;
+        this.loadAbortFlag = false;
+    }
+}
+
+// a collection of attributes
+export interface AttributeSet {
+    features: Array<any>;
+    oidIndex: {[key: string]: number}; // TODO check if we're relly using the index enough to make it worth keeping
+}
+
+export interface ArcGisServerUrl {
+    rootUrl: string;
+    index: number;
+}
+
+export interface RampLayerConfig {
+    id?: string;
+    url?: string;
+    name?: string;
+    state?: {
+        visibility?: boolean;
+        opacity?: number;
+    };
+    customRenderer?: any; // TODO expand, if worth it. fairly complex object
+    refreshInterval?: number;
+    initialFilteredQuery?: string;
+}

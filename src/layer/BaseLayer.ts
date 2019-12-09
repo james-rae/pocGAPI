@@ -2,10 +2,12 @@
 // TODO add proper comments
 
 import esri = __esri;
-import { EsriBundle, InfoBundle, LayerState } from '../gapiTypes';
+import { EsriBundle, InfoBundle, LayerState, RampLayerConfig } from '../gapiTypes';
 import BaseBase from '../BaseBase';
 import FakeEvent from '../FakeEvent';
 import BaseFC from './BaseFC';
+import TreeNode from './TreeNode';
+import NaughtyPromise from '../util/NaughtyPromise';
 
 export default class BaseLayer extends BaseBase {
 
@@ -24,16 +26,18 @@ export default class BaseLayer extends BaseBase {
     protected sawLoad: boolean;
     protected sawRefresh: boolean;
     protected name: string; // TODO re-evaluate this. using protected property here to store name until FCs get created. might be smarter way
-    protected origRampConfig: any;
+    protected origRampConfig: RampLayerConfig;
+    protected loadProimse: NaughtyPromise; // a promise that resolves when layer is fully ready and safe to use. for convenience of caller
 
     // FC management
     protected fcs: Array<BaseFC>;
+    protected layerTree: TreeNode;
 
     // ----------- LAYER CONSTRUCTION AND INITIALIZAION -----------
 
     // NOTE since constructor needs to be called first, we might want to push a lot of initialization to an .init() function
     //      that actual implementer classes call in their constructors. e.g. for a file layer, might need to process file parts prior to running LayerBase stuff
-    protected constructor (infoBundle: InfoBundle, rampConfig: any) {
+    protected constructor (infoBundle: InfoBundle, rampConfig: RampLayerConfig) {
         super(infoBundle);
 
         this.visibilityChanged = new FakeEvent();
@@ -43,6 +47,7 @@ export default class BaseLayer extends BaseBase {
         this.state = LayerState.LOADING;
         this.sawLoad = false;
         this.sawRefresh = false;
+        this.loadProimse = new NaughtyPromise();
 
         this.fcs = [];
         this.origRampConfig = rampConfig;
@@ -128,7 +133,7 @@ export default class BaseLayer extends BaseBase {
      * @param rampLayerConfig snippet from RAMP for this layer
      * @returns configuration object for the ESRI layer representing this layer
      */
-    protected makeEsriLayerConfig(rampLayerConfig: any): any {
+    protected makeEsriLayerConfig(rampLayerConfig: RampLayerConfig): any {
         // TODO flush out
         // NOTE: it would be nice to put esri.LayerProperties as the return type, but since we are cheating with refreshInterval it wont work
         //       we can make our own interface if it needs to happen (or can extent the esri one)
@@ -155,6 +160,9 @@ export default class BaseLayer extends BaseBase {
             // no name from config. attempt layer name
             this.name = this.innerLayer.title || '';
         }
+
+        // basic layer tree. fancier layers will simply steamroll over this
+        this.layerTree = new TreeNode(0, this.name);
 
         // TODO implement extent defaulting. Need to add property, get appropriate format from incoming ramp config, maybe need an interface
         /*
@@ -183,12 +191,21 @@ export default class BaseLayer extends BaseBase {
         return [lookupPromise];
     }
 
+    // provides a promise that resolves when the layer has finished loading
+    isLayerLoaded(): Promise<void> {
+        return this.loadProimse.getPromise();
+    }
+
     // ----------- LAYER MANAGEMENT -----------
 
-    getLayerTree(): any {
+    getLayerTree(): TreeNode {
+
+        // TODO construction of tree is done in onLoad
+        // TODO throw error if called too early? may want to standardize that error for other properties
         // TODO make type for tree node
         // TODO make basic tree code here (one child at root)
         // TODO override in MapImageLayer for fancy tree
+        return this.layerTree;
     }
 
     protected getFC(layerIdx: number): BaseFC {
