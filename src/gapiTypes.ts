@@ -79,6 +79,7 @@ export interface GeoApi {
     shared?: any;
     query?: any;
     events?: any;
+    highlight?: any;
 
     // TODO add module names as we import them
 

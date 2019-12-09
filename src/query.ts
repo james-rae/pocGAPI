@@ -21,6 +21,11 @@ import sqlParser from 'js-sql-parser';
  * @return {Object} resolves with a feature set of features that satisfy the query
  */
 function queryGeometryHelper(esriBundle: EsriBundle, geometry: Geometry, isFileLayer: boolean, mapScale?: number, sourceWkid?: number): Geometry {
+    // NOTE while we have attempted to make most projection things be based around spatial references,
+    //      not wkids, for the time being will leave this as is. We only have logic to handle a specific
+    //      case (projecting lat-long to lambert), and things run ok if no wkid is specified.
+    //      If we ever need to update this logic to handle non-wkid projections, then we'll need
+    //      some fancier code.
 
     let finalGeom: Geometry;
 
