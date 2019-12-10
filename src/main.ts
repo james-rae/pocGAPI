@@ -16,7 +16,7 @@ gapiPromise.then((gapi: GeoApi) => {
 
   const esriMapConfig = {
     basemap: 'topo'
-  }
+  };
   const map: Map = gapi.maps.createMap(esriMapConfig, 'dirtyDiv');
 
   const rampFeatureLayerConfig = {
@@ -24,26 +24,27 @@ gapiPromise.then((gapi: GeoApi) => {
     url: 'http://maps-cartes.ec.gc.ca/arcgis/rest/services/EcoGeo/EcoGeo/MapServer/6',
     state: {
       opacity: 0.8
-    }
-  }
+    },
+    customRenderer: {} // just to chill things out. real ramp will have all properties defaulted and filled in
+  };
 
   const fancyLayer: FeatureLayer = gapi.layers.createFeatureLayer(rampFeatureLayerConfig);
 
-  fancyLayer.stateChanged.listen((mahState: string) => {console.log('RESPECT MAH STATE: ' + mahState);});
+  fancyLayer.stateChanged.listen((mahState: string) => { console.log('RESPECT MAH STATE: ' + mahState); });
 
   map.addLayer(fancyLayer);
 
   const rampMapImageLayerConfig = {
-    id: "extraFancyTest",
-    name: "I was once called Dynamic",
-    layerType: "esriDynamic", // TODO change this?
+    id: 'extraFancyTest',
+    name: 'I was once called Dynamic',
+    layerType: 'esriDynamic', // TODO change this keyvalue?
     layerEntries: [{ index: 21 }, { index: 17 }, { index: 19 }],
-    disabledControls: ["opacity", "visibility"],
+    disabledControls: ['opacity', 'visibility'],
     state: {
-      "opacity": 0,
-      "visibility": false
+      opacity: 0,
+      visibility: false
     },
-    url: "http://geoappext.nrcan.gc.ca/arcgis/rest/services/NACEI/energy_infrastructure_of_north_america_en/MapServer"
+    url: 'http://geoappext.nrcan.gc.ca/arcgis/rest/services/NACEI/energy_infrastructure_of_north_america_en/MapServer'
   };
 
 });

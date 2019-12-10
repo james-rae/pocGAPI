@@ -147,6 +147,6 @@ export default class SharedUtils extends BaseBase {
         }
 
         return result;
-    };
+    }
 
-};
+}

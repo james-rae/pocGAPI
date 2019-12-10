@@ -2,10 +2,11 @@
 
 
 import esri = __esri;
-import { EsriBundle, InfoBundle, LayerState, RampLayerConfig } from '../gapiTypes';
+import { EsriBundle, InfoBundle, LayerState, RampLayerConfig, ArcGisServerUrl } from '../gapiTypes';
 import AttribLayer from './AttribLayer';
 import AttribFC from './AttribFC';
 import TreeNode from './TreeNode';
+import FeatureFC from './FeatureFC';
 
 export default class FeatureLayer extends AttribLayer {
 
@@ -81,6 +82,7 @@ export default class FeatureLayer extends AttribLayer {
 
         // TODO implement the package. we probably want to refactor this so everything is defined in layers (AttribFC seems good target)
         //      and loading attributes is a call to attribute module
+        // TODO split file stuff to subclass?
         /*
         let attribPackage;
         let featIdx;
@@ -100,11 +102,15 @@ export default class FeatureLayer extends AttribLayer {
         }
         */
 
-        const featIdx: number =  this.gapi.utils.shared.parseUrlIndex((<esri.FeatureLayer>this.innerLayer).url).index;
+        // TODO .url seems to not have the /index ending.  there is parsedUrl.path, but thats not on official definition
+        // const layerUrl: string = (<esri.FeatureLayer>this.innerLayer).url;
+        const layerUrl: string = (<any>this.innerLayer).parsedUrl.path;
+        const urlData: ArcGisServerUrl = this.gapi.utils.shared.parseUrlIndex(layerUrl);
+        const featIdx: number =  urlData.index;
 
         // feature has only one layer
-        const aFC = new AttribFC(this.infoBundle(), this, featIdx);
-        this.fcs[featIdx] = aFC;
+        const featFC = new FeatureFC(this.infoBundle(), this, featIdx);
+        this.fcs[featIdx] = featFC;
         this.layerTree = new TreeNode(featIdx, this.name); // TODO verify name is populated at this point
 
         // TODO implement symbology load
@@ -112,20 +118,28 @@ export default class FeatureLayer extends AttribLayer {
 
         // update asynch data
         // TODO do all this lol
-        /*
-        const pLD = aFC.getLayerData().then(ld => {
-            aFC.geomType = ld.geometryType;
-            aFC.oidField = ld.oidField;
-            aFC.nameField = this.config.nameField || ld.nameField || '';
-            aFC.tooltipField = this.config.tooltipField || aFC.nameField;
+        const pLD: Promise<void> = featFC.loadLayerMetadata(layerUrl).then(() => {
+            // apply any config based overrides to the data we just downloaded
+            featFC.nameField = this.origRampConfig.nameField || featFC.nameField || '';
+            featFC.tooltipField = this.origRampConfig.tooltipField || featFC.nameField;
 
+            // TODO add back in after we deicde https://github.com/james-rae/pocGAPI/issues/14
+            /*
             // check the config for any custom field aliases, and add the alias as a property if it exists
-            if (this.config.source.fieldMetadata) {
+            if (this.origRampConfig.fieldMetadata) {
                 ld.fields.forEach(field => {
                     const clientAlias = this.config.source.fieldMetadata.find(f => f.data === field.name);
                     field.clientAlias = clientAlias ? clientAlias.alias : undefined;
                 });
             }
+            */
+        });
+
+        /*
+        const pLD = aFC.getLayerData().then(ld => {
+
+
+            // TODO implement, maybe move into superclass
 
             // trickery. file layer can have field names that are bad keys.
             // our file loader will have corrected them, but config.nameField and config.tooltipField will have
@@ -176,7 +190,10 @@ export default class FeatureLayer extends AttribLayer {
         */
 
         // TODO add back in promises
-        // loadPromises.push(pLD, pFC, pLS);
+        loadPromises.push(pLD); // , pFC, pLS
+
+        // TODO re-think this part. current way means this block has to be in the last part of a chain of super.onLoad calls
+        //      might want the promises to be in another function and have a non-supered function call that function and then do this
         Promise.all(loadPromises).then(() => {
             this.stateChanged.fireEvent(LayerState.LOADED);
             this.loadProimse.resolveMe();

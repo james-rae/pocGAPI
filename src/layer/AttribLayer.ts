@@ -3,8 +3,9 @@
 
 
 import esri = __esri;
-import { EsriBundle, InfoBundle } from '../gapiTypes';
+import { EsriBundle, InfoBundle, AttributeSet } from '../gapiTypes';
 import BaseLayer from './BaseLayer';
+import AttribFC from './AttribFC';
 
 export default class AttribLayer extends BaseLayer {
 
@@ -16,6 +17,10 @@ export default class AttribLayer extends BaseLayer {
 
         super(infoBundle, config);
 
+    }
+
+    protected getFC(layerIdx: number): AttribFC {
+        return (<AttribFC>super.getFC(layerIdx));
     }
 
     /**
@@ -33,6 +38,18 @@ export default class AttribLayer extends BaseLayer {
         // TODO add any extra properties for attrib-based layers here
 
         return esriConfig;
+    }
+
+    getAttributes (layerIdx: number = undefined): Promise<AttributeSet> {
+        return this.getFC(layerIdx).attLoader.getAttribs();
+    }
+
+    abortAttributeLoad (layerIdx: number = undefined): void {
+        this.getFC(layerIdx).attLoader.abortAttribLoad();
+    }
+
+    destroyAttributes (layerIdx: number = undefined): void {
+        this.getFC(layerIdx).attLoader.destroyAttribs();
     }
 
 }

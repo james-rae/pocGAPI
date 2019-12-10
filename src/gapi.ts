@@ -126,6 +126,7 @@ export default async (esriApiUrl: string, window: DojoWindow): Promise<GeoApi> =
         ['esri/layers/MapImageLayer', 'MapImageLayer'], // formerly known as ArcGISDynamicMapServiceLayer
         ['esri/layers/TileLayer', 'TileLayer'], // formerly known as ArcGISTiledMapServiceLayer
         ['esri/layers/WMSLayer', 'WmsLayer'],
+        ['esri/layers/support/Field', 'Field'],
         ['esri/layers/support/ImageParameters', 'ImageParameters'],
         ['esri/layers/support/Sublayer', 'Sublayer'], // formerly known as LayerDrawingOptions
         ['esri/layers/support/WMSSublayer', 'WMSSublayer'], // formerly known as WMSLayerInfo

@@ -26,6 +26,7 @@ export class EsriBundle {
 
     // LAYERS
     FeatureLayer: esri.FeatureLayerConstructor;
+    Field: esri.FieldConstructor;
     GeoJSONLayer: esri.GeoJSONLayerConstructor;
     GraphicsLayer: esri.GraphicsLayerConstructor;
     ImageParameters: esri.ImageParametersConstructor;
@@ -70,7 +71,7 @@ export class EsriBundle {
     Color: esri.ColorConstructor;
     dojoQuery: dojo.query;
     esriConfig: esri.config;
-    esriRequest: esri.request;
+    esriRequest: Function; // esri.request; // TODO figure out how to do this.  the esri.request doesn't align right with what dojo spits back. if it has to be a function, add the types to the signature
 }
 
 // TODO might be worth making this a class or a generator function with defaults.  dont know what the impact of making all properties optonal is.
@@ -107,21 +108,10 @@ export enum LayerState { // these are used as css classes; hence the `rv` prefix
     ERROR = 'rv-error'
 }
 
-// an object that is passed into the asynch attribute loader. the loader can read and update these properties on each iteration
-export class AsynchAttribController {
-    loadedCount: number;
-    loadAbortFlag: boolean;
-
-    constructor() {
-        this.loadedCount = 0;
-        this.loadAbortFlag = false;
-    }
-}
-
 // a collection of attributes
 export interface AttributeSet {
     features: Array<any>;
-    oidIndex: {[key: string]: number}; // TODO check if we're relly using the index enough to make it worth keeping
+    oidIndex?: {[key: string]: number}; // TODO check if we're relly using the index enough to make it worth keeping
 }
 
 export interface ArcGisServerUrl {
@@ -129,15 +119,25 @@ export interface ArcGisServerUrl {
     index: number;
 }
 
+export interface RampLayerStateConfig {
+    visibility?: boolean;
+    opacity?: number;
+}
+
+export interface RampLayerFieldMetadataConfig {
+    data?: string;
+    alias?: string;
+}
+
 export interface RampLayerConfig {
     id?: string;
     url?: string;
     name?: string;
-    state?: {
-        visibility?: boolean;
-        opacity?: number;
-    };
+    state?: RampLayerStateConfig;
     customRenderer?: any; // TODO expand, if worth it. fairly complex object
     refreshInterval?: number;
     initialFilteredQuery?: string;
+    fieldMetadata?: Array<RampLayerFieldMetadataConfig>;
+    nameField?: string;
+    tooltipField?: string;
 }

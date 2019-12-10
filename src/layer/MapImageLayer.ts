@@ -63,6 +63,7 @@ export default class MapImageLayer extends AttribLayer {
      */
     onLoad (): Array<Promise<void>> {
         const loadPromises: Array<Promise<void>> = super.onLoad();
+        /* TODO IMPLEMENT
 
         // we run into a lot of funny business with functions/constructors modifying parameters.
         // this essentially clones an object to protect original objects against trickery.
@@ -345,12 +346,13 @@ export default class MapImageLayer extends AttribLayer {
             loadPromises.push(setTitle);
         }
 
-
+        */
 
         // TODO add back in promises
         // loadPromises.push(pLD, pFC, pLS);
         Promise.all(loadPromises).then(() => {
             this.stateChanged.fireEvent(LayerState.LOADED);
+            this.loadProimse.resolveMe();
         });
 
         return loadPromises;

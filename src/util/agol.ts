@@ -14,7 +14,7 @@ function queryAgolItemBuilder(esriBundle: EsriBundle): Object {
     return (url: string, id: string, token: string): Promise<Object> => {
         // request item info
         // TODO fix the `esriRequest.esriRequest` notation
-        const idReq = esriBundle.esriRequest.esriRequest(`${url}sharing/rest/content/items/${id}`, {
+        const idReq = esriBundle.esriRequest(`${url}sharing/rest/content/items/${id}`, {
             query: {
                 token: token,
                 f: 'json'
@@ -24,7 +24,7 @@ function queryAgolItemBuilder(esriBundle: EsriBundle): Object {
         });
 
         // request data info
-        const dataReq = esriBundle.esriRequest.esriRequest(`${url}sharing/rest/content/items/${id}/data`, {
+        const dataReq = esriBundle.esriRequest(`${url}sharing/rest/content/items/${id}/data`, {
             query: {
                 token: token,
                 f: 'json'
@@ -54,7 +54,7 @@ function queryAgolItemBuilder(esriBundle: EsriBundle): Object {
 
                         // request map data info
                         id = (<any>dataResult).map.itemId;
-                        const mapReq = esriBundle.esriRequest.esriRequest(`${url}sharing/rest/content/items/${id}/data`, {
+                        const mapReq = esriBundle.esriRequest(`${url}sharing/rest/content/items/${id}/data`, {
                             query: {
                                 token: token,
                                 f: 'json'
@@ -98,7 +98,7 @@ function queryAgolTokenBuilder(esriBundle: EsriBundle): Object {
      */
     return (url: string, user: string, password: string): Promise<Object> => {
         // standard json request with error checking
-        const tokenReq = esriBundle.esriRequest.esriRequest(`${url}sharing/generateToken`, {
+        const tokenReq = esriBundle.esriRequest(`${url}sharing/generateToken`, {
             query: {
                 request: 'getToken', // request purpose
                 username: user,
