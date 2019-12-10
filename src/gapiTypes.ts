@@ -1,5 +1,10 @@
+// TODO add proper comments
+// TODO after all the stuff has been dumped in here, re-organize the order into logical sections
+
 import esri = __esri; // magic command to get ESRI JS API type definitions.
 import MapModule from './map/MapModule';
+import LayerModule from './layer/LayerModule';
+import UtilModule from './util/UtilModule';
 
 // gapi loader needs to be a oneshot default due to magic (something about module load being dependant on dojo script load [waves hands, points at Aly]).
 // so putting the types here so they can be shared around
@@ -21,6 +26,7 @@ export class EsriBundle {
 
     // LAYERS
     FeatureLayer: esri.FeatureLayerConstructor;
+    Field: esri.FieldConstructor;
     GeoJSONLayer: esri.GeoJSONLayerConstructor;
     GraphicsLayer: esri.GraphicsLayerConstructor;
     ImageParameters: esri.ImageParametersConstructor;
@@ -65,15 +71,17 @@ export class EsriBundle {
     Color: esri.ColorConstructor;
     dojoQuery: dojo.query;
     esriConfig: esri.config;
-    esriRequest: esri.request;
+    esriRequest: Function; // esri.request; // TODO figure out how to do this.  the esri.request doesn't align right with what dojo spits back. if it has to be a function, add the types to the signature
 }
 
 // TODO might be worth making this a class or a generator function with defaults.  dont know what the impact of making all properties optonal is.
 // TODO figure out best way of managing classes.  e.g. fakeNewsMaps needs to import that file, but that file imports this.
 // Might also make sense to have this interface in it's own file?  Its the more public of interfaces.
 export interface GeoApi {
-    esriBundle?: EsriBundle;
-    maps?: MapModule;
+    esriBundle: EsriBundle; // push inside a dev module?
+    maps: MapModule;
+    layers: LayerModule;
+    utils: UtilModule;
     dev?: any;
     agol?: any;
     shared?: any;
@@ -84,4 +92,52 @@ export interface GeoApi {
     // TODO add module names as we import them
 
     fakeNewsMaps?: any; // TODO remove after real maps are implemented
+}
+
+// used to pass reference information into class constructors. saves us from having two parameters. value!
+export interface InfoBundle {
+    esriBundle: EsriBundle;
+    api: GeoApi;
+}
+
+export enum LayerState { // these are used as css classes; hence the `rv` prefix
+    NEW = 'rv-new',
+    REFRESH = 'rv-refresh',
+    LOADING = 'rv-loading',
+    LOADED = 'rv-loaded',
+    ERROR = 'rv-error'
+}
+
+// a collection of attributes
+export interface AttributeSet {
+    features: Array<any>;
+    oidIndex?: {[key: string]: number}; // TODO check if we're relly using the index enough to make it worth keeping
+}
+
+export interface ArcGisServerUrl {
+    rootUrl: string;
+    index: number;
+}
+
+export interface RampLayerStateConfig {
+    visibility?: boolean;
+    opacity?: number;
+}
+
+export interface RampLayerFieldMetadataConfig {
+    data?: string;
+    alias?: string;
+}
+
+export interface RampLayerConfig {
+    id?: string;
+    url?: string;
+    name?: string;
+    state?: RampLayerStateConfig;
+    customRenderer?: any; // TODO expand, if worth it. fairly complex object
+    refreshInterval?: number;
+    initialFilteredQuery?: string;
+    fieldMetadata?: Array<RampLayerFieldMetadataConfig>;
+    nameField?: string;
+    tooltipField?: string;
 }

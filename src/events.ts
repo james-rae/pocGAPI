@@ -1,3 +1,11 @@
+// TODO this likely needs re-write.
+//      ESRI4 uses property watches, not dojo.on
+//      also in RAMP2 all calls to wrapEvents were in geoApi anyways, except for one instance.
+//      so we can likely make our own events or expose things raw via dev module to let people do as they please
+//      https://developers.arcgis.com/javascript/latest/guide/migrating/#properties
+
+//  also Johann had some suggestion about this, need to find it make sure we respect
+
 /**
  * Wire up any supplied handlers to the corresponding dojo .on events on layer.
  * Purpose is to keep Dojo .on events contained in geoApi.
