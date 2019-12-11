@@ -1,5 +1,7 @@
+// TODO delete file once development is stable and this sample is no longer needed
+
 import esri = __esri;
-import { EsriBundle } from './gapiTypes';
+import { EsriBundle } from '../gapiTypes';
 
 export class FakeNewsMap {
 

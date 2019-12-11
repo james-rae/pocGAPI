@@ -83,10 +83,10 @@ export interface GeoApi {
     layers: LayerModule;
     utils: UtilModule;
     dev?: any;
-    agol?: any;
+    // agol?: any;
     shared?: any;
-    query?: any;
-    events?: any;
+    // query?: any;
+    // events?: any;
     highlight?: any;
 
     // TODO add module names as we import them

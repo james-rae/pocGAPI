@@ -5,6 +5,7 @@ import esri = __esri;
 import { EsriBundle, InfoBundle } from '../gapiTypes';
 import BaseBase from '../BaseBase';
 import FeatureLayer from './FeatureLayer';
+import HighlightLayer from './HighlightLayer';
 // import Map from './Map';
 
 export default class LayerModule extends BaseBase {
@@ -19,6 +20,11 @@ export default class LayerModule extends BaseBase {
     createFeatureLayer(config: any): FeatureLayer {
         const l = new FeatureLayer(this.infoBundle(), config);
         return l;
+    }
+
+    createHighlightLayer(options: any): HighlightLayer {
+        // TODO figure out parameters
+        return new HighlightLayer(this.infoBundle(), options);
     }
 
     /*

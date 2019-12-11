@@ -1,11 +1,10 @@
 import { GeoApi, DojoWindow, EsriBundle, InfoBundle } from './gapiTypes';
-import { FakeNewsMapModule } from './fakenewsmap';
+// import { FakeNewsMapModule } from './fakenewsmap';
 import MapModule from './map/MapModule';
 
-import agol from './util/agol';
-import query from './util/query';
-import events from './events';
-import highlight from './highlight';
+// import agol from './util/agol';
+// import events from './old_events';
+
 import LayerModule from './layer/LayerModule';
 import UtilModule from './util/UtilModule';
 
@@ -63,10 +62,9 @@ function initAll(esriBundle: EsriBundle, window: DojoWindow): GeoApi {
     api.attribs = attribute(esriBundle, api);
     api.symbology = symbology(esriBundle, api, window);
     */
-    api.highlight = highlight(esriBundle, api);
-    api.events = events();
-    api.query = query(esriBundle);
-    api.agol = agol(esriBundle);
+
+    // api.events = events(); // TODO figure out how this thing will really work in ESRI4 paradigm. might make sense to expose via dev module?
+    // api.agol = agol(esriBundle); // TODO not 100% we are going to support AGOL in R4MP.
 
     // use of the following `esri` properties/functions are unsupported by ramp team.
     // they are provided for plugin developers who want to write advanced geo functions
@@ -77,7 +75,7 @@ function initAll(esriBundle: EsriBundle, window: DojoWindow): GeoApi {
     api.maps = new MapModule(infoBundle);
     api.layers = new LayerModule(infoBundle);
     api.utils = new UtilModule(infoBundle);
-    api.fakeNewsMaps = new FakeNewsMapModule(esriBundle); // TODO rem9ove me
+    // api.fakeNewsMaps = new FakeNewsMapModule(esriBundle); // TODO rem9ove me
 
     // function to load ESRI API classes that geoApi does not auto-load.
     // param `modules` is an array of arrays, the inner arrays are 2-element consisting

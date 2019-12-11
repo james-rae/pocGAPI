@@ -32,6 +32,13 @@ export default class AttribFC extends BaseFC {
     // NOTE this logic is for ArcGIS Server sourced things.
     //      other sourced attribute layers should override this function.
     loadLayerMetadata(serviceUrl: string): Promise<void> {
+
+        if (!serviceUrl) {
+            // case where a file class (who inherits this class) ends up calling this via .super magic.
+            // will avoid failed attempts at reading a non-existing service.
+            // class should implement their own logic to load metadata (e.g. scrape from file layer)
+            return Promise.resolve();
+        }
         return new Promise ((resolve, reject) => {
 
             // extract info for this service

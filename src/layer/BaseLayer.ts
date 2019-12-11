@@ -4,7 +4,7 @@
 import esri = __esri;
 import { EsriBundle, InfoBundle, LayerState, RampLayerConfig } from '../gapiTypes';
 import BaseBase from '../BaseBase';
-import FakeEvent from '../FakeEvent';
+import { TypedEvent } from '../Event';
 import BaseFC from './BaseFC';
 import TreeNode from './TreeNode';
 import NaughtyPromise from '../util/NaughtyPromise';
@@ -16,9 +16,9 @@ export default class BaseLayer extends BaseBase {
     innerLayer: esri.Layer;
 
     // events
-    visibilityChanged: FakeEvent;
-    opacityChanged: FakeEvent;
-    stateChanged: FakeEvent;
+    visibilityChanged: TypedEvent<boolean>;
+    opacityChanged: TypedEvent<number>;
+    stateChanged: TypedEvent<string>;
 
     // statuses
     state: LayerState;
@@ -40,9 +40,9 @@ export default class BaseLayer extends BaseBase {
     protected constructor (infoBundle: InfoBundle, rampConfig: RampLayerConfig) {
         super(infoBundle);
 
-        this.visibilityChanged = new FakeEvent();
-        this.opacityChanged = new FakeEvent();
-        this.stateChanged = new FakeEvent();
+        this.visibilityChanged = new TypedEvent<boolean>();
+        this.opacityChanged = new TypedEvent<number>();
+        this.stateChanged = new TypedEvent<string>();
 
         this.state = LayerState.LOADING;
         this.sawLoad = false;
