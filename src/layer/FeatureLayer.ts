@@ -103,6 +103,7 @@ export default class FeatureLayer extends AttribLayer {
         */
 
         // TODO .url seems to not have the /index ending.  there is parsedUrl.path, but thats not on official definition
+        //      can also consider changing logic to use origRampConfig.url;
         // const layerUrl: string = (<esri.FeatureLayer>this.innerLayer).url;
         const layerUrl: string = (<any>this.innerLayer).parsedUrl.path;
         const urlData: ArcGisServerUrl = this.gapi.utils.shared.parseUrlIndex(layerUrl);

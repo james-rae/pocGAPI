@@ -1,7 +1,5 @@
-/**
- * @class FakeEvent
- */
-export default class FakeEvent {
+// use <T> thing?
+export class GeneralEvent {
     protected listeners: Array<Function>;
 
     constructor () {
@@ -55,4 +53,23 @@ export default class FakeEvent {
      * @returns {Integer} number of listeners registered on the event
      */
     get listenerCount (): number { return this.listeners.length; }
+}
+
+export class TypedEvent<T> extends GeneralEvent {
+    constructor () {
+        super();
+    }
+
+    fireEvent(param: T): void {
+        super.fireEvent(param);
+    }
+
+    listen (listenerCallback: (param: T) => void): (param: T) => void {
+        return <(param: T) => void>super.listen(listenerCallback);
+    }
+
+    unlisten (listenerCallback: (param: T) => void): void {
+        super.unlisten(listenerCallback);
+    }
+
 }

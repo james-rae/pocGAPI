@@ -1,3 +1,6 @@
+// TODO not 100% we are going to support AGOL in R4MP.
+//      remove file if decision is made not to
+
 import { EsriBundle } from '../gapiTypes';
 
 // functions related to AGOL queries
