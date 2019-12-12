@@ -8,17 +8,32 @@ import AttribFC from './AttribFC';
 import TreeNode from './TreeNode';
 import FeatureFC from './FeatureFC';
 
-export default class FeatureLayer extends AttribLayer {
+// TODO i think we need to change the extends to AttribLayer, as FeatureLayer constructor will attempt to make its own feature layer
+export default class GeoJsonLayer extends AttribLayer {
 
     innerView: esri.MapView;
 
-    constructor (infoBundle: InfoBundle, config: RampLayerConfig) {
+    constructor (infoBundle: InfoBundle, config: RampLayerConfig, geoJson: Object | string) {
 
         const esriConfig = config; // this becomes real logic
 
         super(infoBundle, esriConfig);
 
+        // NOTE: file based layers can require reprojection.
+        //       that is an asynchronous action. and has to happen before the esri layer
+        //       can be created.
+        //       means we need some type of promise for the map to know to wait on before adding the layer to it.
+        //       could be a problem for adding things in order to the map. i.e. 1 layer delays, gets added later.
+        //       if we have the synch layer stack we will be ok
+        // TODO execute the logic to convert geoJson to EsriJson, then smash into feature layer
+        const realJson: Object = typeof geoJson === 'string' ? JSON.parse(geoJson) : geoJson;
+
+        // esri 4: https://developers.arcgis.com/javascript/latest/sample-code/layers-featurelayer-collection/index.html
+        // might need to change our terraformer call to just create a set of graphics? need to inspect terrafomer outputs
+
+        // this will be asynch, triggered after the reprojection of the geojson
         this.innerLayer = new this.esriBundle.FeatureLayer(this.makeEsriLayerConfig(config));
+
         this.initLayer();
 
     }
@@ -30,16 +45,11 @@ export default class FeatureLayer extends AttribLayer {
      * @returns configuration object for the ESRI layer representing this layer
      */
     protected makeEsriLayerConfig(rampLayerConfig: RampLayerConfig): esri.FeatureLayerProperties {
-        // TODO flush out
-        // NOTE: it would be nice to put esri.LayerProperties as the return type, but since we are cheating with refreshInterval it wont work
-        //       we can make our own interface if it needs to happen (or can extent the esri one)
+        // TODO might want to add an extra paremter here, as we will be passing in fields, source graphics, renderer, etc.
         const esriConfig: esri.FeatureLayerProperties = super.makeEsriLayerConfig(rampLayerConfig);
 
-        // TODO add any extra properties for attrib-based layers here
-        // if we have a definition at load, apply it here to avoid cancellation errors on
-        if (rampLayerConfig.initialFilteredQuery) {
-            esriConfig.definitionExpression = rampLayerConfig.initialFilteredQuery;
-        }
+        // TODO add any extra properties for geoJson layers here
+        //      in none, delete this function and let super get called automatically
         return esriConfig;
     }
 
@@ -50,6 +60,8 @@ export default class FeatureLayer extends AttribLayer {
      */
     onLoadActions (): Array<Promise<void>> {
         const loadPromises: Array<Promise<void>> = super.onLoadActions();
+
+        // TODO likely need to populate a lot of stuff using file logic
 
         // we run into a lot of funny business with functions/constructors modifying parameters.
         // this essentially clones an object to protect original objects against trickery.

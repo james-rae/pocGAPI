@@ -3,7 +3,7 @@
 
 
 import esri = __esri;
-import { EsriBundle, InfoBundle, AttributeSet } from '../gapiTypes';
+import { EsriBundle, InfoBundle, AttributeSet, RampLayerConfig } from '../gapiTypes';
 import BaseLayer from './BaseLayer';
 import AttribFC from './AttribFC';
 
@@ -13,7 +13,7 @@ export default class AttribLayer extends BaseLayer {
 
     // TODO type the config?
     // TODO make this protected? is it possible to instatiate a raw AttribLayer?
-    constructor (infoBundle: InfoBundle, config: any) {
+    constructor (infoBundle: InfoBundle, config: RampLayerConfig) {
 
         super(infoBundle, config);
 

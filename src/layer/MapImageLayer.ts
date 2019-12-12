@@ -10,7 +10,7 @@ export default class MapImageLayer extends AttribLayer {
 
     innerView: esri.MapView;
 
-    constructor (infoBundle: InfoBundle, config: any, targetDiv: string) {
+    constructor (infoBundle: InfoBundle, config: RampLayerConfig, targetDiv: string) {
         // TODO massage incoming config to something that conforms to esri.MapProperties interface
         const esriConfig = config; // this becomes real logic
 
@@ -28,11 +28,11 @@ export default class MapImageLayer extends AttribLayer {
      * @param rampLayerConfig snippet from RAMP for this layer
      * @returns configuration object for the ESRI layer representing this layer
      */
-    protected makeEsriLayerConfig(rampLayerConfig: RampLayerConfig): esri.FeatureLayerProperties {
+    protected makeEsriLayerConfig(rampLayerConfig: RampLayerConfig): esri.MapImageLayerProperties {
         // TODO flush out
         // NOTE: it would be nice to put esri.LayerProperties as the return type, but since we are cheating with refreshInterval it wont work
         //       we can make our own interface if it needs to happen (or can extent the esri one)
-        const esriConfig: esri.FeatureLayerProperties = super.makeEsriLayerConfig(rampLayerConfig);
+        const esriConfig: esri.MapImageLayerProperties = super.makeEsriLayerConfig(rampLayerConfig);
 
         // TODO add any extra properties for attrib-based layers here
         // if we have a definition at load, apply it here to avoid cancellation errors on
@@ -57,12 +57,12 @@ export default class MapImageLayer extends AttribLayer {
     }
 
     /**
-     * Triggers when the layer loads.
+     * Actions to take when the layer loads.
      *
-     * @function onLoad
+     * @function onLoadActions
      */
-    onLoad (): Array<Promise<void>> {
-        const loadPromises: Array<Promise<void>> = super.onLoad();
+    onLoadActions (): Array<Promise<void>> {
+        const loadPromises: Array<Promise<void>> = super.onLoadActions();
         /* TODO IMPLEMENT
 
         // we run into a lot of funny business with functions/constructors modifying parameters.
@@ -350,10 +350,6 @@ export default class MapImageLayer extends AttribLayer {
 
         // TODO add back in promises
         // loadPromises.push(pLD, pFC, pLS);
-        Promise.all(loadPromises).then(() => {
-            this.stateChanged.fireEvent(LayerState.LOADED);
-            this.loadProimse.resolveMe();
-        });
 
         return loadPromises;
     }

@@ -6,12 +6,16 @@ import { EsriBundle, InfoBundle } from '../gapiTypes';
 import BaseBase from '../BaseBase';
 import FeatureLayer from './FeatureLayer';
 import HighlightLayer from './HighlightLayer';
+import FileUtils from './FileUtils';
 // import Map from './Map';
 
 export default class LayerModule extends BaseBase {
 
+    file: FileUtils;
+
     constructor (infoBundle: InfoBundle) {
         super(infoBundle);
+        this.file = new FileUtils(infoBundle);
     }
 
     // TODO make create layer set of functions

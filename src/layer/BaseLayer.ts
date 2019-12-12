@@ -22,12 +22,18 @@ export default class BaseLayer extends BaseBase {
 
     // statuses
     state: LayerState;
+
+    /**
+     * Indicates layer had loaded and achieved one sucessful update. I.e. layer has been drawn on the map once.
+     * @property initLoadDone
+     */
     get initLoadDone (): boolean { return this.sawLoad && this.sawRefresh; }
     protected sawLoad: boolean;
     protected sawRefresh: boolean;
     protected name: string; // TODO re-evaluate this. using protected property here to store name until FCs get created. might be smarter way
     protected origRampConfig: RampLayerConfig;
     protected loadProimse: NaughtyPromise; // a promise that resolves when layer is fully ready and safe to use. for convenience of caller
+    protected esriPromise: NaughtyPromise; // a promise that resolves when esri layer object has been created
 
     // FC management
     protected fcs: Array<BaseFC>;
@@ -48,6 +54,7 @@ export default class BaseLayer extends BaseBase {
         this.sawLoad = false;
         this.sawRefresh = false;
         this.loadProimse = new NaughtyPromise();
+        this.esriPromise = new NaughtyPromise();
 
         this.fcs = [];
         this.origRampConfig = rampConfig;
@@ -123,6 +130,8 @@ export default class BaseLayer extends BaseBase {
             });
         });
 
+        this.esriPromise.resolveMe();
+
     }
 
     // TODO strongly type if it makes sense. unsure if we want client config definitions in here
@@ -155,7 +164,18 @@ export default class BaseLayer extends BaseBase {
     // ----------- LAYER LOAD -----------
 
     // when esri layer loads, this will make sure the layer and FCs are in synch then let outsiders know its loaded
-    protected onLoad(): Array<Promise<void>> {
+    protected onLoad(): void {
+
+        // magic happens here. other layers will override onLoadActions,
+        // meaning this will run the function appropriate for the layer who inherited LayerBase
+        const loadPromises: Array<Promise<void>> = this.onLoadActions();
+        Promise.all(loadPromises).then(() => {
+            this.stateChanged.fireEvent(LayerState.LOADED);
+            this.loadProimse.resolveMe();
+        });
+    }
+
+    protected onLoadActions(): Array<Promise<void>> {
         if (!this.name) {
             // no name from config. attempt layer name
             this.name = this.innerLayer.title || '';
@@ -191,9 +211,27 @@ export default class BaseLayer extends BaseBase {
         return [lookupPromise];
     }
 
-    // provides a promise that resolves when the layer has finished loading
+    /**
+     * Provides a promise that resolves when the layer has finished loading. If accessing layer properties that
+     * depend on the layer being loaded, wait on this promise before accessing them.
+     *
+     * @method isLayerLoaded
+     * @returns {Promise} resolves when the layer has finished loading
+     */
     isLayerLoaded(): Promise<void> {
         return this.loadProimse.getPromise();
+    }
+
+    /**
+     * Provides a promise that resolves when the layer is ready to be added to a map.
+     * Adding to a map before this has resolved is ok, but it will not appear on the map until after
+     * (really only relevant if the timing/order of adding layers is important)
+     *
+     * @method isReadyForMap
+     * @returns {Promise} resolves when the layer has finished loading
+     */
+    isReadyForMap(): Promise<void> {
+        return this.esriPromise.getPromise();
     }
 
     // ----------- LAYER MANAGEMENT -----------

@@ -29,8 +29,11 @@ export default class Map extends MapBase {
     }
 
     // TODO implement
-    addLayer (layer: LayerBase): void {
-        this.innerMap.add(layer.innerLayer);
+    // promise resolves when layer gets added to map
+    addLayer (layer: LayerBase): Promise<void> {
+        return layer.isReadyForMap().then(() => {
+            this.innerMap.add(layer.innerLayer);
+        });
     }
 
     addHighlightLayer (highlightLayer: HighlightLayer) : void {

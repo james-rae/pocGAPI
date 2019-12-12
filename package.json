@@ -23,22 +23,25 @@
     "js-sql-parser": "1.0.7"
   },
   "devDependencies": {
-    "@types/node": "7.0.0",
-    "@types/arcgis-js-api": "~4.13.0",
-    "@types/dojo": "^1.9.41",
-    "awesome-typescript-loader": "5.2.0",
-    "source-map-loader": "0.2.3",
-    "tslint": "5.17.0",
-    "tslint-loader": "3.6.0",
-    "typescript": "3.5.1",
-    "webpack": "4.12.0",
-    "webpack-cli": "3.0.8",
-    "webpack-dev-server": "3.9.0",
     "@babel/cli": "^7.2.3",
     "@babel/core": "^7.4.0",
     "@babel/plugin-proposal-class-properties": "^7.4.0",
     "@babel/plugin-proposal-object-rest-spread": "^7.4.0",
     "@babel/preset-env": "^7.4.1",
-    "@babel/preset-typescript": "^7.3.3"
+    "@babel/preset-typescript": "^7.3.3",
+    "@types/arcgis-js-api": "~4.13.0",
+    "@types/dojo": "^1.9.41",
+    "@types/node": "7.0.0",
+    "@types/proj4": "2.5.0",
+    "awesome-typescript-loader": "5.2.1",
+    "proj4": "2.6.0",
+    "source-map-loader": "0.2.3",
+    "terraformer": "1.0.9",
+    "tslint": "5.17.0",
+    "tslint-loader": "3.6.0",
+    "typescript": "3.5.1",
+    "webpack": "4.12.0",
+    "webpack-cli": "3.0.8",
+    "webpack-dev-server": "3.9.0"
   }
 }

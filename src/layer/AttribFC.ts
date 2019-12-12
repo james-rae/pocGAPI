@@ -31,6 +31,7 @@ export default class AttribFC extends BaseFC {
 
     // NOTE this logic is for ArcGIS Server sourced things.
     //      other sourced attribute layers should override this function.
+    // TODO consider moving a bulk of this out to LayerModule; the wizard may have use for running this (e.g. getting field list for a service url)
     loadLayerMetadata(serviceUrl: string): Promise<void> {
 
         if (!serviceUrl) {
