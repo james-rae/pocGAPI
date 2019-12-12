@@ -64,9 +64,8 @@ export default class AttribFC extends BaseFC {
                         this.nameField = sData.displayField;
 
                         // find object id field
-                        // NOTE cannot use arrow functions here due to bug
-                        const noFieldDefOid: boolean = this.fields.every(function (elem: esri.Field) {
-                            if (elem.type === 'oid') { // TODO validate. no longer 'esriFieldTypeOID' as we have casted the server data to client object
+                        const noFieldDefOid: boolean = this.fields.every((elem: esri.Field) => {
+                            if (elem.type === 'oid') {
                                 this.oidField = elem.name;
                                 return false; // break the loop
                             }

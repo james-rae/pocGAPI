@@ -34,6 +34,15 @@ gapiPromise.then((gapi: GeoApi) => {
 
   map.addLayer(fancyLayer);
 
+  fancyLayer.isLayerLoaded().then(() => {
+    // test fun times
+    console.log('saw layer load, attempt attrib load');
+    const attProm = fancyLayer.getAttributes();
+    attProm.then((attResult:any) => {
+      console.log('check out mah attributes', attResult);
+    });
+  })
+
   const rampMapImageLayerConfig = {
     id: 'extraFancyTest',
     name: 'I was once called Dynamic',
