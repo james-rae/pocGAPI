@@ -21,6 +21,7 @@ export default class BaseFC extends BaseBase {
         this.parentLayer = parent;
         this.layerIdx = layerIdx;
         this.name = '';
+        this.scaleSet = new ScaleSet();
     }
 
     /**
