@@ -11,9 +11,9 @@ import FeatureFC from './FeatureFC';
 // TODO i think we need to change the extends to AttribLayer, as FeatureLayer constructor will attempt to make its own feature layer
 export default class GeoJsonLayer extends AttribLayer {
 
-    innerView: esri.MapView;
+    private esriJson: Object; // used as temp var to get around typescript parameter grousing. will be undefined after initLayer()
 
-    constructor (infoBundle: InfoBundle, config: RampLayerConfig, geoJson: Object | string) {
+    constructor (infoBundle: InfoBundle, config: RampLayerConfig, geoJson: any) {
 
         const esriConfig = config; // this becomes real logic
 
@@ -26,16 +26,21 @@ export default class GeoJsonLayer extends AttribLayer {
         //       could be a problem for adding things in order to the map. i.e. 1 layer delays, gets added later.
         //       if we have the synch layer stack we will be ok
         // TODO execute the logic to convert geoJson to EsriJson, then smash into feature layer
-        const realJson: Object = typeof geoJson === 'string' ? JSON.parse(geoJson) : geoJson;
+        const realJson: any = typeof geoJson === 'string' ? JSON.parse(geoJson) : geoJson;
 
         // esri 4: https://developers.arcgis.com/javascript/latest/sample-code/layers-featurelayer-collection/index.html
         // might need to change our terraformer call to just create a set of graphics? need to inspect terrafomer outputs
 
-        // this will be asynch, triggered after the reprojection of the geojson
-        this.innerLayer = new this.esriBundle.FeatureLayer(this.makeEsriLayerConfig(config));
+        // TODO figure out options parameter.
+        this.gapi.layers.file.geoJsonToEsriJson(realJson, {}).then((eJson: any) => {
 
-        this.initLayer();
+            this.esriJson = eJson;
+            // this will be asynch, triggered after the reprojection of the geojson
+            this.innerLayer = new this.esriBundle.FeatureLayer(this.makeEsriLayerConfig(config));
 
+            this.esriJson = undefined;
+            this.initLayer();
+        });
     }
 
     /**
@@ -52,6 +57,8 @@ export default class GeoJsonLayer extends AttribLayer {
         //      in none, delete this function and let super get called automatically
         return esriConfig;
     }
+
+
 
     /**
      * Triggers when the layer loads.

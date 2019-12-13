@@ -74,6 +74,10 @@ export class EsriBundle {
     esriRequest: Function; // esri.request; // TODO figure out how to do this.  the esri.request doesn't align right with what dojo spits back. if it has to be a function, add the types to the signature
 }
 
+export interface EpsgLookup {
+    (code: string | number): Promise<string>;
+}
+
 // TODO might be worth making this a class or a generator function with defaults.  dont know what the impact of making all properties optonal is.
 // TODO figure out best way of managing classes.  e.g. fakeNewsMaps needs to import that file, but that file imports this.
 // Might also make sense to have this interface in it's own file?  Its the more public of interfaces.
@@ -98,6 +102,7 @@ export interface GeoApi {
 export interface InfoBundle {
     esriBundle: EsriBundle;
     api: GeoApi;
+    window: DojoWindow;
 }
 
 export enum LayerState { // these are used as css classes; hence the `rv` prefix
@@ -117,6 +122,12 @@ export interface AttributeSet {
 export interface ArcGisServerUrl {
     rootUrl: string;
     index: number;
+}
+
+export interface RampSpatialReference {
+    wkid?: number;
+    latestWkid?: number;
+    wkt?: string;
 }
 
 export interface RampLayerStateConfig {

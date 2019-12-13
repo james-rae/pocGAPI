@@ -10,8 +10,6 @@ import FeatureFC from './FeatureFC';
 
 export default class FeatureLayer extends AttribLayer {
 
-    innerView: esri.MapView;
-
     constructor (infoBundle: InfoBundle, config: RampLayerConfig) {
 
         const esriConfig = config; // this becomes real logic
