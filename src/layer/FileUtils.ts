@@ -3,7 +3,7 @@ import esri = __esri;
 import { EsriBundle, InfoBundle, ArcGisServerUrl } from '../gapiTypes';
 import BaseBase from '../BaseBase';
 import defaultRenderers from './defaultRenderers.json';
-import ArcGIS from 'terraformer-arcgis-parser';
+import ArcGIS, { ConvertOptions } from 'terraformer-arcgis-parser';
 
 /**
  * Maps GeoJSON geometry types to a set of default renders defined in GlobalStorage.DefaultRenders
@@ -84,12 +84,13 @@ function assignIds(geoJson: any) {
  */
 function extractFields(geoJson) {
     if (geoJson.features.length < 1) {
-        throw new Error('Field extraction requires at least one feature');
+        throw new Error('GeoJSON field extraction requires at least one feature');
     }
 
+    // TODO investigate if a value can be of numeric type in GeoJSON schema. if so, try to detect, change type to number
     if (geoJson.features[0].properties) {
         return Object.keys(geoJson.features[0].properties).map(function (prop) {
-            return { name: prop, type: 'esriFieldTypeString' };
+            return { name: prop, type: 'string' };
         });
     } else {
         return [];
@@ -103,23 +104,23 @@ function extractFields(geoJson) {
  * @param {Object} geoJson           layer data in geoJson format
  * @param {Object} layerDefinition   layer definition of feature layer not yet created
  */
-function cleanUpFields(geoJson, layerDefinition) {
-    const badField = name => {
+function cleanUpFields(geoJson: any, configPackage: esri.FeatureLayerProperties) {
+    const badField = (name: string) => {
         // basic for now. check for spaces.
         return name.indexOf(' ') > -1;
     };
 
-    layerDefinition.fields.forEach(f => {
+    configPackage.fields.forEach(f => {
         if (badField(f.name)) {
-            const oldField = f.name;
-            let newField;
-            let underscore = '_';
+            const oldField: string = f.name;
+            let newField: string;
+            let underscore: string = '_';
             let badNewName;
 
             // determine a new field name that is not bad and is unique, then update the field definition
             do {
                 newField = oldField.replace(/ /g, underscore);
-                badNewName = layerDefinition.fields.find(f2 => f2.name === newField);
+                badNewName = configPackage.fields.find(f2 => f2.name === newField);
                 if (badNewName) {
                     // new field already exists. enhance it
                     underscore += '_';
@@ -145,25 +146,26 @@ export default class FileUtils extends BaseBase {
         super(infoBundle);
     }
 
-    geoJsonToEsriJson(geoJson: any, options: any): Promise<any> {
+    // TODO general type cleanup. just trying to make it work for now
+    geoJsonToEsriJson(geoJson: any, options: any): Promise<esri.FeatureLayerProperties> {
 
         let targetSR;
         let srcProj = 'EPSG:4326'; // 4326 is the default for GeoJSON with no projection defined
-        let layerId;
-        const layerDefinition: any = {
+        let layerId: string;
+        const configPackage: esri.FeatureLayerProperties = {
             objectIdField: 'OBJECTID',
             fields: [
                 {
                     name: 'OBJECTID',
-                    type: 'oid',
+                    type: 'oid'
                 }
             ]
         };
 
         // ensure our features have ids
         assignIds(geoJson);
-        layerDefinition.drawingInfo =
-            defaultRenderers[featureTypeToRenderer[geoJson.features[0].geometry.type]];
+
+        const defRender: any = defaultRenderers[featureTypeToRenderer[geoJson.features[0].geometry.type]];
 
         // attempt to get spatial reference from geoJson
         if (geoJson.crs && geoJson.crs.type === 'name') {
@@ -178,14 +180,8 @@ export default class FileUtils extends BaseBase {
 
             if (options.targetSR) {
                 targetSR = options.targetSR;
-            } else if (options.targetWkid) {
-                // technically no longer supported, but we'll be nice and convert up
-                console.warn('Suggest using option targetSR instead of targetWkid, as unofficial support for targetWkid may end at any time');
-                targetSR = {
-                    wkid: options.targetWkid
-                };
             } else {
-                throw new Error('makeGeoJsonLayer - missing opts.targetSR arguement');
+                throw new Error('geoJsonToEsriJson - missing opts.targetSR arguement');
             }
 
             if (options.layerId) {
@@ -194,42 +190,50 @@ export default class FileUtils extends BaseBase {
                 layerId = this.gapi.utils.shared.generateUUID();
             }
 
+            // due to grousyness of esri typescript, we mangle the colour pre-fromJSON
+            if (options.colour) {
+                defRender.renderer.symbol.color = new this.esriBundle.Color(options.colour).toRgba();
+            }
+
             // TODO add support for renderer option, or drop the option
 
         } else {
-            throw new Error('makeGeoJsonLayer - missing opts arguement');
+            throw new Error('geoJsonToEsriJson - missing opts arguement');
         }
 
-        if (layerDefinition.fields.length === 1) {
-            // caller has not supplied custom field list. so take them all.
-            layerDefinition.fields = layerDefinition.fields.concat(extractFields(geoJson));
-        }
+        // TODO this code only allows for simple renderers as default. Need to examine how the custom renderer from the config gets applied.
+        //      maybe we should be applying that here. Alternately it will be in layer constructor that is overriding that property
+        //      (it might happen after layer load.).  Alternatley it could be in ESRI 4 we can set it upfront on regular feature layers.
+        configPackage.renderer = this.esriBundle.SimpleRenderer.fromJSON(defRender.renderer);
+        configPackage.fields = configPackage.fields.concat(extractFields(geoJson));
 
         // clean the fields. in particular, CSV files can be loaded with spaces in
         // the field names
-        cleanUpFields(geoJson, layerDefinition);
+        cleanUpFields(geoJson, configPackage);
 
         const destProj = this.gapi.utils.proj.normalizeProj(targetSR);
 
         // look up projection definitions if they don't already exist and we have enough info
-        const srcLookup = this.gapi.utils.proj.checkProj(srcProj, opts.epsgLookup);
+        const srcLookup = this.gapi.utils.proj.checkProj(srcProj);
 
         // note we need to use the SR object, not the normalized string, as checkProj cant handle a raw WKT
-        //      and this function won't have a raw EPSG code / proj4 string coming from param targetSR
-        const destLookup =  this.gapi.utils.proj.checkProj(targetSR, opts.epsgLookup);
+        //      and this function won't have a raw EPSG code / proj4 string coming from param targetSR.
+        //      if this becomes a problem, we can change checkProj to test if the start of a string is `EPSG`, and if not, assume it's wkt.
+        //      nicer solution would be find a wkt regex to validate, but lazy search didnt reveal one.
+        const destLookup =  this.gapi.utils.proj.checkProj(targetSR);
 
         // change latitude and longitude fields from esriFieldTypeString -> esriFieldTypeDouble if they exist
         if (options) {
             if (options.latfield) {
-                const latField = layerDefinition.fields.find(field => field.name === options.latfield);
+                const latField = configPackage.fields.find(field => field.name === options.latfield);
                 if (latField) {
-                    latField.type = 'esriFieldTypeDouble';
+                    latField.type = 'double';
                 }
             }
             if (options.lonfield) {
-                const longField = layerDefinition.fields.find(field => field.name === options.lonfield);
+                const longField = configPackage.fields.find(field => field.name === options.lonfield);
                 if (longField) {
-                    longField.type = 'esriFieldTypeDouble';
+                    longField.type = 'double';
                 }
             }
         }
@@ -246,44 +250,44 @@ export default class FileUtils extends BaseBase {
 
                 // terraformer has no support for non-wkid layers. can also do funny things if source is 102100.
                 // use 8888 as placehold then adjust below
-                const esriJson = ArcGIS.convert(geoJson, { sr: 8888 });
-                const geometryType = layerDefinition.drawingInfo.geometryType;
+
+                // NOTE latest version of ArcGIS lib seems to have typescript problem, the .sr param is valid but is missing from param type
+                const esriJson = ArcGIS.convert(geoJson, <any>{ sr: 8888 });
+                configPackage.geometryType = defRender.geometryType;
 
                 // set proper SR on the geometeries
+                // TODO appears the library is different.
+                //      according to types, the result features will be in esriJson.features[]
+                //      test, and also check if geometries lack spatialRefs still
+                /*
                 esriJson.forEach(gr => {
                     gr.geometry.spatialReference = fancySR;
                 });
+                */
 
-                const fs = {
-                    features: esriJson,
-                    geometryType
-                };
+                configPackage.source = esriJson.features; // TODO see if this needs to become esriJson.features
+                configPackage.spatialReference = fancySR;
+                configPackage.id = layerId;
 
-                const layer = new esriBundle.FeatureLayer(
-                    {
-                        layerDefinition: layerDefinition,
-                        featureSet: fs
-                    }, {
-                        id: layerId
-                    });
-
-                // ＼(｀O´)／ manually setting SR because it will come out as 4326
-                layer.spatialReference = fancySR;
-
-                if (opts.colour) {
-                    layer.renderer.symbol.color = new esriBundle.Color(opts.colour);
-                }
-
-                // initializing layer using JSON does not set this property. do it manually.
-                layer.geometryType = geometryType;
-                resolve(layer);
+                resolve(configPackage);
             });
         };
 
         // call promises in order
-        return srcLookup.lookupPromise
-            .then(() => destLookup.lookupPromise)
-            .then(() => buildLayer());
+        return srcLookup
+            .then((happy: boolean) => {
+                if (happy) {
+                    return destLookup;
+                } else {
+                    throw new Error(`could not find projection information - ${srcProj}`);
+                }
+            }).then((happy: boolean) => {
+                if (happy) {
+                    return buildLayer();
+                } else {
+                    throw new Error(`could not find projection information - ${destProj}`);
+                }
+            });
     }
 
 }

@@ -11,13 +11,11 @@ import FeatureFC from './FeatureFC';
 // TODO i think we need to change the extends to AttribLayer, as FeatureLayer constructor will attempt to make its own feature layer
 export default class GeoJsonLayer extends AttribLayer {
 
-    private esriJson: Object; // used as temp var to get around typescript parameter grousing. will be undefined after initLayer()
+    private esriJson: esri.FeatureLayerProperties; // used as temp var to get around typescript parameter grousing. will be undefined after initLayer()
 
-    constructor (infoBundle: InfoBundle, config: RampLayerConfig, geoJson: any) {
+    constructor (infoBundle: InfoBundle, rampLayerConfig: RampLayerConfig, geoJson: any, systemOptions: any) {
 
-        const esriConfig = config; // this becomes real logic
-
-        super(infoBundle, esriConfig);
+        super(infoBundle, rampLayerConfig);
 
         // NOTE: file based layers can require reprojection.
         //       that is an asynchronous action. and has to happen before the esri layer
@@ -32,11 +30,18 @@ export default class GeoJsonLayer extends AttribLayer {
         // might need to change our terraformer call to just create a set of graphics? need to inspect terrafomer outputs
 
         // TODO figure out options parameter.
-        this.gapi.layers.file.geoJsonToEsriJson(realJson, {}).then((eJson: any) => {
+        // TODO look into supporting renderer from rampConfig. dont we already have something like this?
+        // TODO should be a colour option. figure out where that comes from. will our ramp config have that? or is it sys option for wizard trickery?
+        // TODO figure out how a sourceProjection option would work. who is supplying this? an API caller? RAMP UI / Config really doesnt support it.
+        const opts = {
+            layerId: rampLayerConfig.id || '',
+            targetSR: systemOptions.mapSR
+        };
+        this.gapi.layers.file.geoJsonToEsriJson(realJson, {}).then((eJson: esri.FeatureLayerProperties) => {
 
             this.esriJson = eJson;
             // this will be asynch, triggered after the reprojection of the geojson
-            this.innerLayer = new this.esriBundle.FeatureLayer(this.makeEsriLayerConfig(config));
+            this.innerLayer = new this.esriBundle.FeatureLayer(this.makeEsriLayerConfig(rampLayerConfig));
 
             this.esriJson = undefined;
             this.initLayer();
@@ -53,12 +58,39 @@ export default class GeoJsonLayer extends AttribLayer {
         // TODO might want to add an extra paremter here, as we will be passing in fields, source graphics, renderer, etc.
         const esriConfig: esri.FeatureLayerProperties = super.makeEsriLayerConfig(rampLayerConfig);
 
+        // TEMP CHECKLIST OF PROPERTIES
+        // source - converter
+        // objectIdField - converter
+        // id - config || converter
+        // fields - converter, possibly alias overrides from config
+        // renderer - converter
+        // spatialReference - converter
+        // geometryType - converter
+        // definitionExpression - TODO need to test / figure out. likely need to port to our filter framework and not set on the layer. might also be handled by AttribLayer plumbing
+
+
         // TODO add any extra properties for geoJson layers here
         //      in none, delete this function and let super get called automatically
+        const copyProp: Array<string> = [
+            'source',
+            'objectIdField',
+            'id',
+            'fields',
+            'renderer',
+            'spatialReference',
+            'geometryType'
+        ];
+
+        copyProp.forEach((p: string) => {
+            esriConfig[p] = this.esriJson[p];
+        });
+
+        // TODO inspect rampLayerConfig for any config field alias overrides or field restrictions. apply them to esriConfig.fields
+
+        this.esriJson = undefined; // done with parameter trickery, erase this.
+
         return esriConfig;
     }
-
-
 
     /**
      * Triggers when the layer loads.

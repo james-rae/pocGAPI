@@ -27,7 +27,6 @@ export class EsriBundle {
     // LAYERS
     FeatureLayer: esri.FeatureLayerConstructor;
     Field: esri.FieldConstructor;
-    GeoJSONLayer: esri.GeoJSONLayerConstructor;
     GraphicsLayer: esri.GraphicsLayerConstructor;
     ImageParameters: esri.ImageParametersConstructor;
     ImageryLayer: esri.ImageryLayerConstructor; // formerly known as ArcGISImageServiceLayer

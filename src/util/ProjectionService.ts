@@ -85,6 +85,7 @@ export default class ProjectionService extends BaseBase {
     }
 
     // TODO probably need to make this return a promise, and do epsgLookups on the proj codes.
+    //      at the moment we're safe, as the function calling this is dong the lookups. depends how robust/reusable we want this to be
     /**
      * Reproject a GeoJSON object in place.
      * @param {Object} geojson the GeoJSON to be reprojected, this will be modified in place

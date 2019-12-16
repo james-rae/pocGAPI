@@ -120,7 +120,6 @@ export default async (esriApiUrl: string, window: DojoWindow, epsgLookup: EpsgLo
         ['esri/geometry/SpatialReference', 'SpatialReference'],
         ['esri/Graphic', 'Graphic'],
         ['esri/layers/FeatureLayer', 'FeatureLayer'],
-        ['esri/layers/GeoJSONLayer', 'GeoJSONLayer'],
         ['esri/layers/GraphicsLayer', 'GraphicsLayer'],
         ['esri/layers/ImageryLayer', 'ImageryLayer'], // formerly known as ArcGISImageServiceLayer
         ['esri/layers/MapImageLayer', 'MapImageLayer'], // formerly known as ArcGISDynamicMapServiceLayer

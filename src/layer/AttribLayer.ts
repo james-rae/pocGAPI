@@ -36,6 +36,7 @@ export default class AttribLayer extends BaseLayer {
         const esriConfig: any = super.makeEsriLayerConfig(rampLayerConfig);
 
         // TODO add any extra properties for attrib-based layers here
+        // TODO definitionExpression / filter default support here?
 
         return esriConfig;
     }
