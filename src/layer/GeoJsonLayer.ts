@@ -37,7 +37,7 @@ export default class GeoJsonLayer extends AttribLayer {
             layerId: rampLayerConfig.id || '',
             targetSR: systemOptions.mapSR
         };
-        this.gapi.layers.file.geoJsonToEsriJson(realJson, {}).then((eJson: esri.FeatureLayerProperties) => {
+        this.gapi.layers.file.geoJsonToEsriJson(realJson, opts).then((eJson: esri.FeatureLayerProperties) => {
 
             this.esriJson = eJson;
             // this will be asynch, triggered after the reprojection of the geojson
@@ -155,6 +155,7 @@ export default class GeoJsonLayer extends AttribLayer {
         // TODO .url seems to not have the /index ending.  there is parsedUrl.path, but thats not on official definition
         //      can also consider changing logic to use origRampConfig.url;
         // const layerUrl: string = (<esri.FeatureLayer>this.innerLayer).url;
+        /*
         const layerUrl: string = (<any>this.innerLayer).parsedUrl.path;
         const urlData: ArcGisServerUrl = this.gapi.utils.shared.parseUrlIndex(layerUrl);
         const featIdx: number =  urlData.index;
@@ -166,16 +167,17 @@ export default class GeoJsonLayer extends AttribLayer {
 
         // TODO implement symbology load
         // const pLS = aFC.loadSymbology();
-
+        */
         // update asynch data
         // TODO do all this lol
+        /*
         const pLD: Promise<void> = featFC.loadLayerMetadata(layerUrl).then(() => {
             // apply any config based overrides to the data we just downloaded
             featFC.nameField = this.origRampConfig.nameField || featFC.nameField || '';
             featFC.tooltipField = this.origRampConfig.tooltipField || featFC.nameField;
 
             // TODO add back in after we deicde https://github.com/james-rae/pocGAPI/issues/14
-            /*
+
             // check the config for any custom field aliases, and add the alias as a property if it exists
             if (this.origRampConfig.fieldMetadata) {
                 ld.fields.forEach(field => {
@@ -183,9 +185,9 @@ export default class GeoJsonLayer extends AttribLayer {
                     field.clientAlias = clientAlias ? clientAlias.alias : undefined;
                 });
             }
-            */
-        });
 
+        });
+        */
         /*
         const pLD = aFC.getLayerData().then(ld => {
 
@@ -241,7 +243,7 @@ export default class GeoJsonLayer extends AttribLayer {
         */
 
         // TODO add back in promises
-        loadPromises.push(pLD); // , pFC, pLS
+        // loadPromises.push(pLD); // , pFC, pLS
 
         return loadPromises;
     }

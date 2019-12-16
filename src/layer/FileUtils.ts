@@ -251,21 +251,19 @@ export default class FileUtils extends BaseBase {
                 // terraformer has no support for non-wkid layers. can also do funny things if source is 102100.
                 // use 8888 as placehold then adjust below
 
-                // NOTE latest version of ArcGIS lib seems to have typescript problem, the .sr param is valid but is missing from param type
-                const esriJson = ArcGIS.convert(geoJson, <any>{ sr: 8888 });
+                // NOTE typescript lies here. it insists esriJson will have .features property, but it infact is the feature array itself
+                //      it also claims the .sr param is not valid, though it's in the documentation and the code.  lies!
+                const esriJson = <any>ArcGIS.convert(geoJson, <any>{ sr: 8888 });
                 configPackage.geometryType = defRender.geometryType;
 
                 // set proper SR on the geometeries
-                // TODO appears the library is different.
-                //      according to types, the result features will be in esriJson.features[]
-                //      test, and also check if geometries lack spatialRefs still
-                /*
                 esriJson.forEach(gr => {
                     gr.geometry.spatialReference = fancySR;
+                    gr.geometry.type = defRender.geometryType;
                 });
-                */
 
-                configPackage.source = esriJson.features; // TODO see if this needs to become esriJson.features
+
+                configPackage.source = <any>esriJson; // TODO see if this needs to become esriJson.features
                 configPackage.spatialReference = fancySR;
                 configPackage.id = layerId;
 

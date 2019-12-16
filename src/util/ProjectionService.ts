@@ -22,6 +22,23 @@ export default class ProjectionService extends BaseBase {
         } else {
             this.espgWorker = this.defaultEpsgLookup;
         }
+
+        // cook in useful things to proj4 that won't be available via epsgLookup
+        proj4.defs('EPSG:3978', '+proj=lcc +lat_1=49 +lat_2=77 +lat_0=49 +lon_0=-95 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs');
+        proj4.defs('EPSG:3979', '+proj=lcc +lat_1=49 +lat_2=77 +lat_0=49 +lon_0=-95 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs');
+        proj4.defs('EPSG:54004', '+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs');
+        proj4.defs('EPSG:102100', proj4.defs('EPSG:3857'));
+        proj4.defs('EPSG:102187', '+proj=tmerc +lat_0=0 +lon_0=-114 +k=0.9999 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs');
+        proj4.defs('EPSG:102190', '+proj=aea +lat_1=50 +lat_2=58.5 +lat_0=45 +lon_0=-126 +x_0=1000000 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs');
+
+        // add UTM projections
+        let utm = 1;
+        while (utm <= 60) {
+            let zone = utm < 10 ? `0${utm}` : utm;
+            proj4.defs(`EPSG:326${zone}`, `+proj=utm +zone=${utm} +ellps=WGS84 +datum=WGS84 +units=m +no_defs`);
+            utm++;
+        }
+
     }
 
     // default for lazyness. uses official epsg website, hardcoded for extra style points.
