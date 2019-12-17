@@ -173,7 +173,7 @@ export default async (esriApiUrl: string, window: DojoWindow, epsgLookup: EpsgLo
         oScript.onerror = (err: any) => reject(err);
         oScript.onload = () => resolve();
         oHead.appendChild(oScript);
-        oScript.src = esriApiUrl; // '//ec.cloudapp.net/~aly/esri/dojo/dojo.js';
+        oScript.src = esriApiUrl;
     });
 
     const esriBundle = await makeDojoRequests(esriDeps, window);
