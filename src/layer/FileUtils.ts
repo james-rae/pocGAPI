@@ -125,7 +125,7 @@ function cleanUpFields(geoJson: any, configPackage: esri.FeatureLayerProperties)
                     // new field already exists. enhance it
                     underscore += '_';
                 }
-            } while (badNewName)
+            } while (badNewName);
 
             f.alias = oldField;
             f.name = newField;
@@ -246,7 +246,7 @@ export default class FileUtils extends BaseBase {
 
                 const fancySR = new this.esriBundle.SpatialReference(targetSR);
 
-                this.gapi.utils.proj.projectGeoJson(geoJson, destProj, srcProj);
+                this.gapi.utils.proj.projectGeoJson(geoJson, srcProj, destProj);
 
                 // terraformer has no support for non-wkid layers. can also do funny things if source is 102100.
                 // use 8888 as placehold then adjust below

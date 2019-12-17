@@ -72,7 +72,7 @@ export default class HighlightLayer extends BaseBase {
 
         // add new highlight graphics
        this.innerLayer.addMany(graphics);
-    };
+    }
 
     /**
      * Remove highlight from map
@@ -80,6 +80,6 @@ export default class HighlightLayer extends BaseBase {
      */
     clearHighlight(): void {
         this.innerLayer.removeAll();
-    };
+    }
 
 }

@@ -22,6 +22,7 @@ gapiPromise.then((gapi: GeoApi) => {
 
 
   // ------ feature layer test --------
+  /*
   const rampFeatureLayerConfig = {
     id: 'fancyTest',
     url: 'http://maps-cartes.ec.gc.ca/arcgis/rest/services/EcoGeo/EcoGeo/MapServer/6',
@@ -45,7 +46,7 @@ gapiPromise.then((gapi: GeoApi) => {
       console.log('check out mah attributes', attResult);
     });
   })
-
+  */
   // ------ geojson layer test --------
 
   const rampHappyLayerConfig = {

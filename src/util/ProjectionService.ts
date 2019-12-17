@@ -65,7 +65,7 @@ export default class ProjectionService extends BaseBase {
                 } else {
                     reject(); // TODO throw an error?
                 }
-            }, (e: any) => { reject(e) });
+            }, (e: any) => { reject(e); });
 
         });
     }
@@ -134,19 +134,22 @@ export default class ProjectionService extends BaseBase {
         if (!inSr) {
             inSr = 'EPSG:4326';
         } else if (!proj4.defs(inSr)) {
-            throw new Error('Projection: '+inSr+' could not be found in proj4.defs');
+            throw new Error(`Projection: ${inSr} could not be found in proj4.defs`);
         }
 
         if (!outSr) {
             outSr = 'EPSG:4326';
-            if (outSr === inSr) return;
         } else if (!proj4.defs(outSr)) {
-            throw new Error('Projection: '+outSr+' could not be found in proj4.defs');
+            throw new Error(`Projection: ${outSr} could not be found in proj4.defs`);
+        }
+
+        if (outSr === inSr) {
+            return geoJson;
         }
 
         const projFunc = proj4(inSr, outSr).forward;
 
-        return Tools.applyConverter( geoJson, projFunc );
+        return Tools.applyConverter(geoJson, projFunc);
     }
 
     /**

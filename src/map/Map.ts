@@ -36,7 +36,7 @@ export default class Map extends MapBase {
         });
     }
 
-    addHighlightLayer (highlightLayer: HighlightLayer) : void {
+    addHighlightLayer (highlightLayer: HighlightLayer): void {
         this.innerMap.add(highlightLayer.innerLayer);
     }
 
