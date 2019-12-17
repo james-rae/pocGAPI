@@ -7,7 +7,7 @@
 // NOTE to old devs: the hilite layer is now in the layer folder in its own class
 
 import esri = __esri;
-import { InfoBundle, AttributeSet } from '../gapiTypes';
+import { InfoBundle } from '../gapiTypes';
 import BaseBase from '../BaseBase';
 
 export default class HighlightService extends BaseBase {

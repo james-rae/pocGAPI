@@ -2,7 +2,7 @@
 // TODO add proper comments
 
 import esri = __esri;
-import { EsriBundle, InfoBundle, LayerState, RampLayerConfig } from '../gapiTypes';
+import { InfoBundle, LayerState, RampLayerConfig } from '../gapiTypes';
 import BaseBase from '../BaseBase';
 import { TypedEvent } from '../Event';
 import BaseFC from './BaseFC';
@@ -61,6 +61,11 @@ export default class BaseLayer extends BaseBase {
         this.name = rampConfig.name || '';
     }
 
+    protected updateState(newState: LayerState): void {
+        this.state = newState;
+        this.stateChanged.fireEvent(newState);
+    }
+
     // generic init stuff, like adding listeners/propogaters to events
     protected initLayer() {
         // TODO add event handlers.  basic stuff here, super classes can add more.
@@ -102,6 +107,9 @@ export default class BaseLayer extends BaseBase {
             this.opacityChanged.fireEvent(newval);
         });
 
+        // TODO for state stuff, do we need to also synch this.state?
+        //      if so probably want a protected worker changeMyState function that sets prop and fires event.
+
         this.innerLayer.watch('loadStatus', (newval: string) => {
             const statemap = {
                 'not-loaded': LayerState.LOADING,
@@ -117,13 +125,13 @@ export default class BaseLayer extends BaseBase {
                 this.onLoad();
                 this.sawLoad = true; // TODO investigate if we need to push this to the same location that the event is fired
             } else {
-                this.stateChanged.fireEvent(statemap[newval]);
+                this.updateState(statemap[newval]);
             }
         });
 
         this.innerLayer.on('layerview-create', (e: esri.LayerLayerviewCreateEvent) => {
             e.layerView.watch('updating', (newval: boolean) => {
-                this.stateChanged.fireEvent(newval ? LayerState.REFRESH : LayerState.LOADED );
+                this.updateState(newval ? LayerState.REFRESH : LayerState.LOADED );
                 if (newval) {
                     this.sawRefresh = true;
                 }
@@ -170,7 +178,7 @@ export default class BaseLayer extends BaseBase {
         // meaning this will run the function appropriate for the layer who inherited LayerBase
         const loadPromises: Array<Promise<void>> = this.onLoadActions();
         Promise.all(loadPromises).then(() => {
-            this.stateChanged.fireEvent(LayerState.LOADED);
+            this.updateState(LayerState.LOADED);
             this.loadProimse.resolveMe();
         });
     }
@@ -194,20 +202,17 @@ export default class BaseLayer extends BaseBase {
         this.extent = shared.makeSafeExtent(this.extent);
         */
 
-        let lookupPromise = Promise.resolve();
-
-        // TODO figure out how we're going to handle this.
-        /*
-        if (this._epsgLookup) {
-            const check = this._apiRef.proj.checkProj(this.spatialReference, this._epsgLookup);
-            if (check.lookupPromise) {
-                lookupPromise = check.lookupPromise;
+       // layer base class doesnt have spatial ref, but we will assume all our layers do.
+       // consider adding fancy checks if its missing, and if so just promise.resolve
+       const lookupPromise = this.gapi.utils.proj.checkProj((<any>this.innerLayer).spatialReference).then((goodSR: boolean) => {
+            if (goodSR) {
+                return Promise.resolve();
+            } else {
+                this.updateState(LayerState.ERROR);
+                return Promise.reject();
             }
+       });
 
-            // TODO if we don't find a projection, the app will show the layer loading forever.
-            //      might need to handle the fail case and show something to the user.
-        }
-        */
         return [lookupPromise];
     }
 

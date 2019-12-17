@@ -2,7 +2,7 @@
 
 
 import esri = __esri;
-import { EsriBundle, InfoBundle, LayerState, RampLayerConfig } from '../gapiTypes';
+import { InfoBundle, LayerState, RampLayerConfig } from '../gapiTypes';
 import AttribLayer from './AttribLayer';
 
 // Formerly known as DynamicLayer

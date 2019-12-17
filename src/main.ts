@@ -22,7 +22,7 @@ gapiPromise.then((gapi: GeoApi) => {
 
 
   // ------ feature layer test --------
-  /*
+
   const rampFeatureLayerConfig = {
     id: 'fancyTest',
     url: 'http://maps-cartes.ec.gc.ca/arcgis/rest/services/EcoGeo/EcoGeo/MapServer/6',
@@ -42,11 +42,11 @@ gapiPromise.then((gapi: GeoApi) => {
     // test fun times
     console.log('saw layer load, attempt attrib load');
     const attProm = fancyLayer.getAttributes();
-    attProm.then((attResult:any) => {
+    attProm.then((attResult: any) => {
       console.log('check out mah attributes', attResult);
     });
-  })
-  */
+  });
+
   // ------ geojson layer test --------
 
   const rampHappyLayerConfig = {
@@ -65,6 +65,15 @@ gapiPromise.then((gapi: GeoApi) => {
 
   const happyLayer: GeoJsonLayer = gapi.layers.createGeoJSONLayer(rampHappyLayerConfig , happy, systemMagic);
   map.addLayer(happyLayer);
+
+  happyLayer.isLayerLoaded().then(() => {
+    // test fun times
+    console.log('saw happy layer load, attempt attrib load');
+    const attProm = happyLayer.getAttributes();
+    attProm.then((attResult: any) => {
+      console.log('check out mah happy attributes', attResult);
+    });
+  });
 
   // ------ map image layer test --------
 

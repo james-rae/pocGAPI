@@ -3,7 +3,7 @@
 // TODO add proper comments
 
 import esri = __esri;
-import { EsriBundle, InfoBundle } from '../gapiTypes';
+import { InfoBundle } from '../gapiTypes';
 import MapBase from './MapBase';
 
 export class Map3D extends MapBase {

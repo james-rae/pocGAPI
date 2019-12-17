@@ -1,7 +1,7 @@
 // TODO add nice comments
 
 import esri = __esri;
-import { InfoBundle, AttributeSet } from '../gapiTypes';
+import { InfoBundle } from '../gapiTypes';
 import BaseBase from '../BaseBase';
 import defaultSymbols from './defaulthighlightSymbols.json';
 

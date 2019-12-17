@@ -2,11 +2,10 @@
 // TODO add proper comments
 
 import esri = __esri;
-import { EsriBundle, InfoBundle } from '../gapiTypes';
+import { InfoBundle } from '../gapiTypes';
 import BaseLayer from './BaseLayer';
 import BaseFC from './BaseFC';
 import { AttributeLoaderBase, AttributeLoaderDetails, ArcServerAttributeLoader } from '../util/AttributeLoader';
-import FeatureLayer from './FeatureLayer';
 
 export default class AttribFC extends BaseFC {
 
@@ -20,6 +19,7 @@ export default class AttribFC extends BaseFC {
     renderer: esri.Renderer; // TODO careful. this is js api class, we might be dealing with server class.  also since we enhance, we might need to extend the interface
     legend: any; // TODO figure out what this is. i think it's our custom class. make a definition somewhere
     attLoader: AttributeLoaderBase;
+    featureCount: number; // TODO figure out how to identify an unknown count. will use undefined for now. -1 would be other option
 
     constructor (infoBundle: InfoBundle, parent: BaseLayer, layerIdx: number = 0) {
         super(infoBundle, parent, layerIdx);

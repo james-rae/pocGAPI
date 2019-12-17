@@ -9,6 +9,8 @@ export default class SharedUtils extends BaseBase {
         super(infoBundle);
     }
 
+    // TODO remove builder, use this.esriBundle
+    // TODO figure out grand scheme of layer type strings. use enum? adopt server strings?
     getLayerTypeBuilder(esriBundle: EsriBundle): Object {
         /**
          * Will return a string indicating the type of layer a layer object is.

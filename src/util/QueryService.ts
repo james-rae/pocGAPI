@@ -2,7 +2,7 @@
 // TODO change all the 'any' in this file to more strict types if possible
 
 import esri = __esri;
-import { InfoBundle, AttributeSet } from '../gapiTypes';
+import { InfoBundle } from '../gapiTypes';
 import BaseBase from '../BaseBase';
 import Aql from './Aql';
 

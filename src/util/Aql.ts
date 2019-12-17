@@ -1,7 +1,5 @@
 import sqlParser from 'js-sql-parser';
 
-// TODO move the AQL stuff to it's own .ts file
-
 // AQL classes.  Attribute Query Language is a cheap thing that allows you to evaluate a SQL where style clause
 // against an attribute object (i.e. a key-value dictionary). Has limited support for basic query logic
 // (can be expanded)

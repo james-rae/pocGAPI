@@ -2,7 +2,7 @@
 // TODO add proper comments
 
 import esri = __esri;
-import { EsriBundle, InfoBundle, RampLayerConfig } from '../gapiTypes';
+import { InfoBundle, RampLayerConfig } from '../gapiTypes';
 import BaseBase from '../BaseBase';
 import FeatureLayer from './FeatureLayer';
 import HighlightLayer from './HighlightLayer';

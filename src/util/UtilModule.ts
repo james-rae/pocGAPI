@@ -4,7 +4,7 @@
 // TODO add proper comments
 
 import esri = __esri;
-import { EsriBundle, InfoBundle, EpsgLookup } from '../gapiTypes';
+import { InfoBundle, EpsgLookup } from '../gapiTypes';
 import BaseBase from '../BaseBase';
 import AttributeService from './AttributeService';
 import SharedUtils from './SharedUtils';

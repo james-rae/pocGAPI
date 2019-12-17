@@ -1,9 +1,9 @@
 import esri = __esri;
 
-import { EsriBundle, InfoBundle, ArcGisServerUrl } from '../gapiTypes';
+import { InfoBundle } from '../gapiTypes';
 import BaseBase from '../BaseBase';
 import defaultRenderers from './defaultRenderers.json';
-import ArcGIS, { ConvertOptions } from 'terraformer-arcgis-parser';
+import ArcGIS from 'terraformer-arcgis-parser';
 
 /**
  * Maps GeoJSON geometry types to a set of default renders defined in GlobalStorage.DefaultRenders

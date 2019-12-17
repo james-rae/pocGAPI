@@ -2,11 +2,34 @@
 
 
 import esri = __esri;
-import { EsriBundle, InfoBundle, LayerState, RampLayerConfig, ArcGisServerUrl } from '../gapiTypes';
+import { InfoBundle, LayerState, RampLayerConfig } from '../gapiTypes';
 import AttribLayer from './AttribLayer';
-import AttribFC from './AttribFC';
 import TreeNode from './TreeNode';
-import FeatureFC from './FeatureFC';
+import GeoJsonFC from './GeoJsonFC';
+
+
+// util function to manage trickery. file layer can have field names that are bad keys.
+// our file loader will have corrected them, but ramp layer config .nameField and .tooltipField may
+// still have the original field names.
+// This function will return a valid field name for a given field name. First attempts at
+// direct match, then attempts to reverse any bad field renaming logic.
+function fieldValidator(fields: Array<esri.Field>, targetName: string): string {
+    if (fields.findIndex((f: esri.Field) => f.name === targetName) === -1) {
+        // no direct match found.
+        const validField: esri.Field = fields.find((f: esri.Field) => f.alias === targetName);
+        if (validField) {
+            return validField.name;
+        } else {
+            // give warning and return OBJECTID, which is guaranteed to exist in file layer.
+            // Issue is not critical enough to blow up the app with an error
+            console.warn(`Cannot find name field in layer field list: ${targetName}`);
+            return 'OBJECTID';
+        }
+    } else {
+        // target name wa ok
+        return targetName;
+    }
+}
 
 // TODO i think we need to change the extends to AttribLayer, as FeatureLayer constructor will attempt to make its own feature layer
 export default class GeoJsonLayer extends AttribLayer {
@@ -85,6 +108,8 @@ export default class GeoJsonLayer extends AttribLayer {
             esriConfig[p] = this.esriJson[p];
         });
 
+        esriConfig.displayField = fieldValidator(<Array<esri.Field>>esriConfig.fields, rampLayerConfig.nameField) || 'OBJECTID';
+
         // TODO inspect rampLayerConfig for any config field alias overrides or field restrictions. apply them to esriConfig.fields
 
         this.esriJson = undefined; // done with parameter trickery, erase this.
@@ -100,19 +125,12 @@ export default class GeoJsonLayer extends AttribLayer {
     onLoadActions (): Array<Promise<void>> {
         const loadPromises: Array<Promise<void>> = super.onLoadActions();
 
-        // TODO likely need to populate a lot of stuff using file logic
-
-        // we run into a lot of funny business with functions/constructors modifying parameters.
-        // this essentially clones an object to protect original objects against trickery.
-        const jsonCloner = (inputObject: any) => {
-            return JSON.parse(JSON.stringify(inputObject));
-        };
-
         // attempt to set custom renderer here. if fails, we can attempt on client but prefer it here
         // as this doesnt care where the layer came from
+        // TODO implement custom renderers
+        // TODO look at final implementation of FeatureLayer, will probably be similar
+        /*
         if (this.origRampConfig.customRenderer.type) {
-            // TODO implement custom renderers
-            /*
             // all renderers have a type field. if it's missing, no renderer was provided, or its garbage
             const classMapper = {
                 simple: this._apiRef.symbology.SimpleRenderer,
@@ -125,114 +143,43 @@ export default class GeoJsonLayer extends AttribLayer {
             const cloneRenderer = jsonCloner(this.config.customRenderer);
             const custRend = classMapper[cloneRenderer.type](cloneRenderer);
             this._layer.setRenderer(custRend);
-            */
-        }
 
-        // get attribute package
-
-        // TODO implement the package. we probably want to refactor this so everything is defined in layers (AttribFC seems good target)
-        //      and loading attributes is a call to attribute module
-        // TODO split file stuff to subclass?
-        /*
-        let attribPackage;
-        let featIdx;
-        if (this.dataSource() !== shared.dataSources.ESRI) {
-            featIdx = '0';
-            attribPackage = this._apiRef.attribs.loadFileAttribs(this._layer);
-        } else {
-            const splitUrl = shared.parseUrlIndex(this._layer.url);
-            featIdx = splitUrl.index;
-            this.rootUrl = splitUrl.rootUrl;
-
-            // methods in the attrib loader will update our copy of the renderer. if we pass in the config reference, it gets
-            // updated and some weird stuff happens. Make a copy.
-            const cloneRenderer = jsonCloner(this.config.customRenderer);
-            attribPackage = this._apiRef.attribs.loadServerAttribs(splitUrl.rootUrl, featIdx, this.config.outfields,
-                cloneRenderer);
         }
         */
 
-        // TODO .url seems to not have the /index ending.  there is parsedUrl.path, but thats not on official definition
-        //      can also consider changing logic to use origRampConfig.url;
-        // const layerUrl: string = (<esri.FeatureLayer>this.innerLayer).url;
-        /*
-        const layerUrl: string = (<any>this.innerLayer).parsedUrl.path;
-        const urlData: ArcGisServerUrl = this.gapi.utils.shared.parseUrlIndex(layerUrl);
-        const featIdx: number =  urlData.index;
-
         // feature has only one layer
-        const featFC = new FeatureFC(this.infoBundle(), this, featIdx);
-        this.fcs[featIdx] = featFC;
-        this.layerTree = new TreeNode(featIdx, this.name); // TODO verify name is populated at this point
+        const featIdx: number = 0; // GeoJSON is always 0
+        const gjFC = new GeoJsonFC(this.infoBundle(), this, featIdx);
+        this.fcs[featIdx] = gjFC;
 
         // TODO implement symbology load
         // const pLS = aFC.loadSymbology();
-        */
+
         // update asynch data
         // TODO do all this lol
+        // NOTE: call extract, not load, as there is no service involved here
+        gjFC.extractLayerMetadata();
+        if (this.origRampConfig.tooltipField) {
+            gjFC.tooltipField = fieldValidator(gjFC.fields, this.origRampConfig.tooltipField);
+        } else {
+            gjFC.tooltipField = gjFC.nameField;
+        }
+
         /*
-        const pLD: Promise<void> = featFC.loadLayerMetadata(layerUrl).then(() => {
-            // apply any config based overrides to the data we just downloaded
-            featFC.nameField = this.origRampConfig.nameField || featFC.nameField || '';
-            featFC.tooltipField = this.origRampConfig.tooltipField || featFC.nameField;
 
-            // TODO add back in after we deicde https://github.com/james-rae/pocGAPI/issues/14
+        // TODO add back in after we deicde https://github.com/james-rae/pocGAPI/issues/14
 
-            // check the config for any custom field aliases, and add the alias as a property if it exists
-            if (this.origRampConfig.fieldMetadata) {
-                ld.fields.forEach(field => {
-                    const clientAlias = this.config.source.fieldMetadata.find(f => f.data === field.name);
-                    field.clientAlias = clientAlias ? clientAlias.alias : undefined;
-                });
-            }
+        // check the config for any custom field aliases, and add the alias as a property if it exists
+        if (this.origRampConfig.fieldMetadata) {
+            ld.fields.forEach(field => {
+                const clientAlias = this.config.source.fieldMetadata.find(f => f.data === field.name);
+                field.clientAlias = clientAlias ? clientAlias.alias : undefined;
+            });
+        }
 
-        });
-        */
-        /*
-        const pLD = aFC.getLayerData().then(ld => {
-
-
-            // TODO implement, maybe move into superclass
-
-            // trickery. file layer can have field names that are bad keys.
-            // our file loader will have corrected them, but config.nameField and config.tooltipField will have
-            // been supplied from the wizard (it pre-fetches fields to present a choice
-            // to the user). If the nameField / tooltipField was adjusted for bad characters, we need to
-            // re-synchronize it here.
-            if (this.dataSource() !== shared.dataSources.ESRI) {
-                if (ld.fields.findIndex(f => f.name === aFC.nameField) === -1) {
-                    const validField = ld.fields.find(f => f.alias === aFC.nameField);
-                    if (validField) {
-                        aFC.nameField = validField.name;
-                        if (!this.config.tooltipField) {    // tooltipField wasn't explicitly provided, so it was also using the bad nameField key
-                            aFC.tooltipField = validField.name
-                        }
-                    } else {
-                        // give warning. impact is tooltips will have no text, details pane no header
-                        console.warn(`Cannot find name field in layer field list: ${aFC.nameField}`);
-                    }
-                }
-
-                // only check the tooltipField if it was provided from the config, otherwise it would have been corrected above already (if required)
-                if (this.config.tooltipField && ld.fields.findIndex(f => f.name === aFC.tooltipField) === -1) {
-                    const validField = ld.fields.find(f => f.alias === aFC.tooltipField);
-                    if (validField) {
-                        aFC.tooltipField = validField.name;
-                    } else {
-                        // give warning. impact is tooltips will have no text, details pane no header
-                        console.warn(`Cannot find name field in layer field list: ${aFC.tooltipField}`);
-                    }
-                }
-            }
-        });
         */
 
-        // TODO implement feature count
-        /*
-        const pFC = this.getFeatureCount().then(fc => {
-            this._fcount = fc;
-        });
-        */
+        gjFC.featureCount = (<esri.FeatureLayer>this.innerLayer).source.length;
 
         // if file based (or server extent was fried), calculate extent based on geometry
         // TODO implement this. may need a manual loop to calculate graphicsExtent since ESRI torpedo'd the function
@@ -241,9 +188,6 @@ export default class GeoJsonLayer extends AttribLayer {
             this.extent = this._apiRef.proj.graphicsUtils.graphicsExtent(this._layer.graphics);
         }
         */
-
-        // TODO add back in promises
-        // loadPromises.push(pLD); // , pFC, pLS
 
         return loadPromises;
     }

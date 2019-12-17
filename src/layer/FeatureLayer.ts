@@ -2,9 +2,8 @@
 
 
 import esri = __esri;
-import { EsriBundle, InfoBundle, LayerState, RampLayerConfig, ArcGisServerUrl } from '../gapiTypes';
+import { InfoBundle, LayerState, RampLayerConfig, ArcGisServerUrl } from '../gapiTypes';
 import AttribLayer from './AttribLayer';
-import AttribFC from './AttribFC';
 import TreeNode from './TreeNode';
 import FeatureFC from './FeatureFC';
 
@@ -59,6 +58,8 @@ export default class FeatureLayer extends AttribLayer {
         // as this doesnt care where the layer came from
         if (this.origRampConfig.customRenderer.type) {
             // TODO implement custom renderers
+            // TODO try and do this in the constructor for the esri layer; API4 might accomodate that.
+            //      since GeoJsonLayer would use this too, maybe abstarct the creation part to a util module
             /*
             // all renderers have a type field. if it's missing, no renderer was provided, or its garbage
             const classMapper = {

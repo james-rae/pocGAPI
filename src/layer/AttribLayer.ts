@@ -3,7 +3,7 @@
 
 
 import esri = __esri;
-import { EsriBundle, InfoBundle, AttributeSet, RampLayerConfig } from '../gapiTypes';
+import { InfoBundle, AttributeSet, RampLayerConfig } from '../gapiTypes';
 import BaseLayer from './BaseLayer';
 import AttribFC from './AttribFC';
 

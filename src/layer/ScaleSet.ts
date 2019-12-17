@@ -1,9 +1,6 @@
 
 // TODO add proper comments
 
-import esri = __esri;
-import { EsriBundle, InfoBundle } from '../gapiTypes';
-
 // TODO move to main gapi types file?
 interface OffScaleStatus {
     offScale: boolean;

@@ -3,7 +3,7 @@
 
 
 import esri = __esri;
-import { EsriBundle, InfoBundle } from '../gapiTypes';
+import { InfoBundle } from '../gapiTypes';
 import MapBase from './MapBase';
 import LayerBase from '../layer/BaseLayer';
 import HighlightLayer from '../layer/HighlightLayer';
