@@ -4,12 +4,13 @@
 // TODO add proper comments
 
 import esri = __esri;
-import { EsriBundle, InfoBundle } from '../gapiTypes';
+import { InfoBundle, EpsgLookup } from '../gapiTypes';
 import BaseBase from '../BaseBase';
 import AttributeService from './AttributeService';
 import SharedUtils from './SharedUtils';
 import QueryService from './QueryService';
 import HighlightService from './HighlightService';
+import ProjectionService from './ProjectionService';
 
 export default class UtilModule extends BaseBase {
 
@@ -17,13 +18,15 @@ export default class UtilModule extends BaseBase {
     shared: SharedUtils;
     query: QueryService;
     highlight: HighlightService;
+    proj: ProjectionService;
 
-    constructor (infoBundle: InfoBundle) {
+    constructor (infoBundle: InfoBundle, epsgFunction: EpsgLookup = undefined) {
         super(infoBundle);
         this.attributes = new AttributeService(infoBundle);
         this.shared = new SharedUtils(infoBundle);
         this.query = new QueryService(infoBundle);
         this.highlight = new HighlightService(infoBundle);
+        this.proj = new ProjectionService(infoBundle, epsgFunction);
     }
 
 }

@@ -2,7 +2,7 @@
 // mainly utilitiy links to make stuff easy to code
 // TODO add proper documentation
 
-import { EsriBundle, InfoBundle, GeoApi } from './gapiTypes';
+import { EsriBundle, InfoBundle, GeoApi, DojoWindow } from './gapiTypes';
 
 export default class BaseBase {
 
@@ -12,16 +12,20 @@ export default class BaseBase {
     // points to instance of geoApi to allow other functions to be called
     protected gapi: GeoApi;
 
+    protected window: DojoWindow;
+
     protected constructor (infoBundle: InfoBundle) {
         this.esriBundle = infoBundle.esriBundle;
         this.gapi = infoBundle.api;
+        this.window = infoBundle.window;
     }
 
     // helper function for when classes want to spawn another class, and need to pass an infobundle
     protected infoBundle(): InfoBundle {
         return {
             esriBundle: this.esriBundle,
-            api: this.gapi
+            api: this.gapi,
+            window: this.window
         };
     }
 

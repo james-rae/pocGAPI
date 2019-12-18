@@ -1,4 +1,4 @@
-import { GeoApi, DojoWindow, EsriBundle, InfoBundle } from './gapiTypes';
+import { GeoApi, DojoWindow, EsriBundle, InfoBundle, EpsgLookup } from './gapiTypes';
 // import { FakeNewsMapModule } from './fakenewsmap';
 import MapModule from './map/MapModule';
 
@@ -40,7 +40,7 @@ function makeDojoRequests(modules: Array<Array<string>>, window: DojoWindow): Pr
 }
 
 // essentially sets up the main geoApi module object and initializes all the subcomponents
-function initAll(esriBundle: EsriBundle, window: DojoWindow): GeoApi {
+function initAll(esriBundle: EsriBundle, window: DojoWindow, epsgLookup: EpsgLookup = undefined): GeoApi {
     // make explicit object to avoid the question marks in the definition
     const api: GeoApi = {
         esriBundle: undefined,
@@ -51,7 +51,8 @@ function initAll(esriBundle: EsriBundle, window: DojoWindow): GeoApi {
     };
     const infoBundle: InfoBundle = {
         api,
-        esriBundle
+        esriBundle,
+        window
     };
 
     /*
@@ -74,7 +75,7 @@ function initAll(esriBundle: EsriBundle, window: DojoWindow): GeoApi {
     api.esriBundle = esriBundle;
     api.maps = new MapModule(infoBundle);
     api.layers = new LayerModule(infoBundle);
-    api.utils = new UtilModule(infoBundle);
+    api.utils = new UtilModule(infoBundle, epsgLookup);
     // api.fakeNewsMaps = new FakeNewsMapModule(esriBundle); // TODO rem9ove me
 
     // function to load ESRI API classes that geoApi does not auto-load.
@@ -91,7 +92,8 @@ function initAll(esriBundle: EsriBundle, window: DojoWindow): GeoApi {
     return api;
 }
 
-export default async (esriApiUrl: string, window: DojoWindow): Promise<GeoApi> => {
+// TODO if we find we have more things like epsgLookup that need to be provided at initialization, consider changing the paremeter into an options object
+export default async (esriApiUrl: string, window: DojoWindow, epsgLookup: EpsgLookup = undefined): Promise<GeoApi> => {
 
     // esriDeps is an array pairing ESRI JSAPI dependencies with their imported names
     // in esriBundle
@@ -118,7 +120,6 @@ export default async (esriApiUrl: string, window: DojoWindow): Promise<GeoApi> =
         ['esri/geometry/SpatialReference', 'SpatialReference'],
         ['esri/Graphic', 'Graphic'],
         ['esri/layers/FeatureLayer', 'FeatureLayer'],
-        ['esri/layers/GeoJSONLayer', 'GeoJSONLayer'],
         ['esri/layers/GraphicsLayer', 'GraphicsLayer'],
         ['esri/layers/ImageryLayer', 'ImageryLayer'], // formerly known as ArcGISImageServiceLayer
         ['esri/layers/MapImageLayer', 'MapImageLayer'], // formerly known as ArcGISDynamicMapServiceLayer
@@ -172,9 +173,9 @@ export default async (esriApiUrl: string, window: DojoWindow): Promise<GeoApi> =
         oScript.onerror = (err: any) => reject(err);
         oScript.onload = () => resolve();
         oHead.appendChild(oScript);
-        oScript.src = esriApiUrl; // '//ec.cloudapp.net/~aly/esri/dojo/dojo.js';
+        oScript.src = esriApiUrl;
     });
-    console.log('script for dojo loaded');
+
     const esriBundle = await makeDojoRequests(esriDeps, window);
-    return initAll(esriBundle, window);
+    return initAll(esriBundle, window, epsgLookup);
 };

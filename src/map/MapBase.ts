@@ -4,7 +4,7 @@
 // TODO add proper comments
 
 import esri = __esri;
-import { EsriBundle, InfoBundle, GeoApi } from '../gapiTypes';
+import { InfoBundle } from '../gapiTypes';
 import BaseBase from '../BaseBase';
 
 // TODO would ideally call this BaseMap, but that would get confused with Basemap.

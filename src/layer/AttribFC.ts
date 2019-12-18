@@ -2,11 +2,10 @@
 // TODO add proper comments
 
 import esri = __esri;
-import { EsriBundle, InfoBundle } from '../gapiTypes';
+import { InfoBundle, AttributeSet } from '../gapiTypes';
 import BaseLayer from './BaseLayer';
 import BaseFC from './BaseFC';
 import { AttributeLoaderBase, AttributeLoaderDetails, ArcServerAttributeLoader } from '../util/AttributeLoader';
-import FeatureLayer from './FeatureLayer';
 
 export default class AttribFC extends BaseFC {
 
@@ -20,6 +19,8 @@ export default class AttribFC extends BaseFC {
     renderer: esri.Renderer; // TODO careful. this is js api class, we might be dealing with server class.  also since we enhance, we might need to extend the interface
     legend: any; // TODO figure out what this is. i think it's our custom class. make a definition somewhere
     attLoader: AttributeLoaderBase;
+    featureCount: number; // TODO figure out how to identify an unknown count. will use undefined for now. -1 would be other option
+    private tabularAttributesCache: Promise<any>; // TODO fancy type
 
     constructor (infoBundle: InfoBundle, parent: BaseLayer, layerIdx: number = 0) {
         super(infoBundle, parent, layerIdx);
@@ -31,6 +32,7 @@ export default class AttribFC extends BaseFC {
 
     // NOTE this logic is for ArcGIS Server sourced things.
     //      other sourced attribute layers should override this function.
+    // TODO consider moving a bulk of this out to LayerModule; the wizard may have use for running this (e.g. getting field list for a service url)
     loadLayerMetadata(serviceUrl: string): Promise<void> {
 
         if (!serviceUrl) {
@@ -127,5 +129,93 @@ export default class AttribFC extends BaseFC {
                 reject(error);
             });
         });
+    }
+
+    // formerly known as getFormattedAttributes
+    // TODO making this work for now same as old way. do we want to think about different ways?
+    //      e.g. have consumer parse the raw data and format it?
+    //      doing it here has advantage because layer metadata is also here (e.g. fields array, symbol renderer)
+    // TODO fancy types
+    /**
+     * Retrieves attributes from a layer for a specified feature index
+     * @return {Promise}            promise resolving with formatted attributes to be consumed by the datagrid and esri feature identify
+     */
+    getTabularAttributes (): Promise<any> {
+        // TODO rethink how this works. is it better to read from attributes every time?
+        // TODO make sure we clear this cache if somehow attributes are nulled-out or timed refresh layer
+        if (this.tabularAttributesCache) {
+            return this.tabularAttributesCache;
+        }
+
+        // TODO after refactor, consider changing this to a warning and just return some dummy value
+        // TODO make a layertype constant / enum?
+        if (this.layerType === 'Raster Layer') {
+            throw new Error('Attempting to get attributes on a raster layer.');
+        }
+
+        // TODO we could also wait on this.parentLayer.isLayerLoaded()
+        //      but given FC's get created on the load event, it seems unlikely right now
+        //      that anyone would be calling this pre-layer-load.
+        this.tabularAttributesCache = this.attLoader.getAttribs()
+            .then((attSet: AttributeSet) => {
+                // create columns array consumable by datables. We don't include the alias defined in the config here as
+                // the grid handles it seperately.
+                const columns = this.fields
+                    .filter(field =>
+
+                        // assuming there is at least one attribute - empty attribute budnle promises should be rejected, so it never even gets this far
+                        // filter out fields where there is no corresponding attribute data
+                        attSet.features[0].attributes.hasOwnProperty(field.name))
+                    .map(field => ({
+                        data: field.name,
+                        title: field.alias || field.name
+                    }));
+
+                // derive the icon for the row
+                // TODO figure out if we want to change the system attributes.
+                const rows = attSet.features.map(feature => {
+                    const att = feature.attributes;
+                    att.rvInteractive = '';
+                    att.rvSymbol = undefined; // TODO re-add this.gapi.symbology.getGraphicIcon(att, this.renderer);
+                    return att;
+                });
+
+                // if a field name resembles a function, the data table will treat it as one.
+                // to get around this, we add a function with the same name that returns the value,
+                // tricking that silly datagrid.
+                columns.forEach(c => {
+                    if (c.data.substr(-2) === '()') {
+                        // have to use function() to get .this to reference the row.
+                        // arrow notation will reference the attribFC class.
+                        const secretFunc = function() {
+                            return this[c.data];
+                        };
+
+                        const stub = c.data.substr(0, c.data.length - 2); // function without brackets
+                        rows.forEach(r => {
+                            r[stub] = secretFunc;
+                        });
+                    }
+                });
+
+                return {
+                    columns,
+                    rows,
+                    fields: this.fields, // keep fields for reference ...
+                    oidField: this.oidField, // ... keep a reference to id field ...
+                    oidIndex: attSet.oidIndex, // TODO determine if we need this anymore. who uses it? // ... and keep id mapping array
+                    renderer: this.renderer
+                };
+            })
+            .catch(e => {
+                this.tabularAttributesCache = undefined; // delete cached promise when the geoApi `getAttribs` call fails, so it will be requested again next time `getAttributes` is called;
+                if (e === 'ABORTED') { // TODO see if we're still thowing an error with message ABORTED
+                    throw new Error('ABORTED');
+                } else {
+                    throw new Error('Attrib loading failed');
+                }
+            });
+
+        return this.tabularAttributesCache;
     }
 }

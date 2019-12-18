@@ -2,24 +2,20 @@
 
 
 import esri = __esri;
-import { EsriBundle, InfoBundle, LayerState, RampLayerConfig, ArcGisServerUrl } from '../gapiTypes';
+import { InfoBundle, LayerState, RampLayerConfig, ArcGisServerUrl } from '../gapiTypes';
 import AttribLayer from './AttribLayer';
-import AttribFC from './AttribFC';
 import TreeNode from './TreeNode';
 import FeatureFC from './FeatureFC';
 
 export default class FeatureLayer extends AttribLayer {
 
-    innerView: esri.MapView;
-
-    constructor (infoBundle: InfoBundle, config: any) {
+    constructor (infoBundle: InfoBundle, config: RampLayerConfig) {
 
         const esriConfig = config; // this becomes real logic
 
         super(infoBundle, esriConfig);
 
         this.innerLayer = new this.esriBundle.FeatureLayer(this.makeEsriLayerConfig(config));
-
         this.initLayer();
 
     }
@@ -47,10 +43,10 @@ export default class FeatureLayer extends AttribLayer {
     /**
      * Triggers when the layer loads.
      *
-     * @function onLoad
+     * @function onLoadActions
      */
-    onLoad (): Array<Promise<void>> {
-        const loadPromises: Array<Promise<void>> = super.onLoad();
+    onLoadActions (): Array<Promise<void>> {
+        const loadPromises: Array<Promise<void>> = super.onLoadActions();
 
         // we run into a lot of funny business with functions/constructors modifying parameters.
         // this essentially clones an object to protect original objects against trickery.
@@ -62,6 +58,8 @@ export default class FeatureLayer extends AttribLayer {
         // as this doesnt care where the layer came from
         if (this.origRampConfig.customRenderer.type) {
             // TODO implement custom renderers
+            // TODO try and do this in the constructor for the esri layer; API4 might accomodate that.
+            //      since GeoJsonLayer would use this too, maybe abstarct the creation part to a util module
             /*
             // all renderers have a type field. if it's missing, no renderer was provided, or its garbage
             const classMapper = {
@@ -192,13 +190,6 @@ export default class FeatureLayer extends AttribLayer {
 
         // TODO add back in promises
         loadPromises.push(pLD); // , pFC, pLS
-
-        // TODO re-think this part. current way means this block has to be in the last part of a chain of super.onLoad calls
-        //      might want the promises to be in another function and have a non-supered function call that function and then do this
-        Promise.all(loadPromises).then(() => {
-            this.stateChanged.fireEvent(LayerState.LOADED);
-            this.loadProimse.resolveMe();
-        });
 
         return loadPromises;
     }

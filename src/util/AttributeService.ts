@@ -1,7 +1,7 @@
 // TODO add proper comments
 
 import esri = __esri;
-import { EsriBundle, InfoBundle, AttributeSet } from '../gapiTypes';
+import { InfoBundle, AttributeSet } from '../gapiTypes';
 import BaseBase from '../BaseBase';
 import { AttributeLoaderDetails, AsynchAttribController } from './AttributeLoader';
 
@@ -98,6 +98,32 @@ export default class AttributeService extends BaseBase {
                resolve(attSet);
             });
         });
+    }
+
+    loadGraphicsAttributes(details: AttributeLoaderDetails, controller: AsynchAttribController): Promise<AttributeSet> {
+         // TODO call code to strip from layer
+         if (!details.sourceGraphics) {
+            throw new Error('No .sourceGraphics provided to file layer attribute loader');
+        }
+
+        const pluckedAttributes: esri.Collection<any> = details.sourceGraphics.map((g: esri.Graphic) => {
+            // TODO we may need to strip off attributes here based on what we decide to do.
+            //      there is no network traffic advantage for files (all data is already loaded).
+            //      but we may need to do it for stuff like populating a grid with reduced columns.
+            //      if we do this, we may need to clone the attribute objects then remove properties;
+            //      we don't want to mess with the original source in the layer.
+            return g.attributes;
+        });
+
+        // TODO generate oidIndex if we decide we are still going to use it
+        const attSet: AttributeSet = {
+            features: pluckedAttributes.toArray(),
+            oidIndex: {}
+        };
+
+        controller.loadIsDone = true;
+        controller.loadedCount = attSet.features.length;
+        return Promise.resolve(attSet);
     }
 
 }

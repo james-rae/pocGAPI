@@ -1,7 +1,7 @@
 // TODO add nice comments
 
 import esri = __esri;
-import { InfoBundle, AttributeSet } from '../gapiTypes';
+import { InfoBundle } from '../gapiTypes';
 import BaseBase from '../BaseBase';
 import defaultSymbols from './defaulthighlightSymbols.json';
 
@@ -72,7 +72,7 @@ export default class HighlightLayer extends BaseBase {
 
         // add new highlight graphics
        this.innerLayer.addMany(graphics);
-    };
+    }
 
     /**
      * Remove highlight from map
@@ -80,6 +80,6 @@ export default class HighlightLayer extends BaseBase {
      */
     clearHighlight(): void {
         this.innerLayer.removeAll();
-    };
+    }
 
 }

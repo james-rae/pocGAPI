@@ -1,7 +1,7 @@
 // TODO add proper comments
 
 import esri = __esri;
-import { EsriBundle, InfoBundle } from '../gapiTypes';
+import { InfoBundle } from '../gapiTypes';
 import BaseLayer from './BaseLayer';
 import AttribFC from './AttribFC';
 
