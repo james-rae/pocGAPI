@@ -13,6 +13,7 @@ export default class BaseFC extends BaseBase {
     layerIdx: number; // final name TBD
     name: string;
     scaleSet: ScaleSet;
+    supportsFeatures: boolean;
 
     constructor (infoBundle: InfoBundle, parent: BaseLayer, layerIdx: number = 0) {
 
@@ -22,6 +23,7 @@ export default class BaseFC extends BaseBase {
         this.layerIdx = layerIdx;
         this.name = '';
         this.scaleSet = new ScaleSet();
+        this.supportsFeatures = false; // default state. featurish layers should set to true when the load
     }
 
     /**
