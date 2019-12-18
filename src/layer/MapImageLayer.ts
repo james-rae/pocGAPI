@@ -2,17 +2,15 @@
 
 
 import esri = __esri;
-import { InfoBundle, LayerState, RampLayerConfig } from '../gapiTypes';
+import { InfoBundle, LayerState, RampLayerConfig, RampLayerMapImageLayerEntryConfig } from '../gapiTypes';
 import AttribLayer from './AttribLayer';
 
 // Formerly known as DynamicLayer
 export default class MapImageLayer extends AttribLayer {
 
     constructor (infoBundle: InfoBundle, config: RampLayerConfig, targetDiv: string) {
-        // TODO massage incoming config to something that conforms to esri.MapProperties interface
-        const esriConfig = config; // this becomes real logic
 
-        super(infoBundle, esriConfig);
+        super(infoBundle, config);
 
         this.innerLayer = new this.esriBundle.MapImageLayer(this.makeEsriLayerConfig(config));
 
@@ -51,6 +49,23 @@ export default class MapImageLayer extends AttribLayer {
 
         */
 
+        // process sublayers
+        if (rampLayerConfig.layerEntries) {
+            // NOTE: important not to set esriConfig property to empty array, as that will request no sublayers
+            // TODO documentation isn't clear if we should be using .sublayers or .allSublayers ; if .sublayers can it be flat array?
+            //      play with their online sandbox using a nested service if cant figure it out.
+            // let us all stop to appreciate this line of code.
+            esriConfig.sublayers = (<Array<RampLayerMapImageLayerEntryConfig>>rampLayerConfig.layerEntries).map((le: RampLayerMapImageLayerEntryConfig) => {
+                // the super call will set up the basics/common stuff like vis, opacity, def query
+                // works because the sublayer property scheme is nearly identical to a normal layer
+                const subby: esri.SublayerProperties = super.makeEsriLayerConfig(le);
+                subby.id = le.index;
+
+                // TODO process the other options
+                return subby;
+            })
+        }
+
         return esriConfig;
     }
 
@@ -61,7 +76,16 @@ export default class MapImageLayer extends AttribLayer {
      */
     onLoadActions (): Array<Promise<void>> {
         const loadPromises: Array<Promise<void>> = super.onLoadActions();
+
+        // TODO it is not apparent this property still exists, or what the alternate is to check it.
+        //      last resort is we query the service root here and get the value from arcgis server.
+        //      could double up with the default-name logic which does the same, though it only runs if required.
+        // this._isTrueDynamic = this._layer.supportsDynamicLayers;
+
         /* TODO IMPLEMENT
+
+        // TODO the whole "configIsComplete" logic in RAMP2 was never invoked by the client.
+        //      Don't see the point in re-adding it here.
 
         // we run into a lot of funny business with functions/constructors modifying parameters.
         // this essentially clones an object to protect original objects against trickery.
@@ -69,7 +93,7 @@ export default class MapImageLayer extends AttribLayer {
             return JSON.parse(JSON.stringify(inputObject));
         };
 
-        this._isTrueDynamic = this._layer.supportsDynamicLayers;
+
 
         // don't worry about structured legend. the legend part is separate from
         // the layers part. we just load what we are told to. the legend module
