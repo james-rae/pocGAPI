@@ -34,6 +34,7 @@ export class AttributeLoaderBase extends BaseBase {
     protected aac: AsynchAttribController;
     protected loadPromise: Promise<AttributeSet>;
     protected details: AttributeLoaderDetails;
+    tabularAttributesCache: Promise<any>; // TODO enhance type
 
     protected constructor (infoBundle: InfoBundle, details: AttributeLoaderDetails) {
         super(infoBundle);
@@ -60,6 +61,7 @@ export class AttributeLoaderBase extends BaseBase {
     destroyAttribs(): void {
         // erase private promise
         this.loadPromise = undefined;
+        this.tabularAttributesCache = undefined;
         this.aac.loadIsDone = false;
         this.aac.loadedCount = 0;
     }

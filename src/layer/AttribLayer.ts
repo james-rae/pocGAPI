@@ -53,4 +53,10 @@ export default class AttribLayer extends BaseLayer {
         this.getFC(layerIdx).attLoader.destroyAttribs();
     }
 
+    // formerly known as getFormattedAttributes
+    getTabularAttributes (layerIdx: number = undefined): Promise<AttributeSet> {
+        return this.getFC(layerIdx).getTabularAttributes();
+    }
+
+
 }
