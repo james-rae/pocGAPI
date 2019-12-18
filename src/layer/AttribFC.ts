@@ -20,7 +20,6 @@ export default class AttribFC extends BaseFC {
     legend: any; // TODO figure out what this is. i think it's our custom class. make a definition somewhere
     attLoader: AttributeLoaderBase;
     featureCount: number; // TODO figure out how to identify an unknown count. will use undefined for now. -1 would be other option
-    private tabularAttributesCache: Promise<any>; // TODO fancy type
 
     constructor (infoBundle: InfoBundle, parent: BaseLayer, layerIdx: number = 0) {
         super(infoBundle, parent, layerIdx);
@@ -142,9 +141,8 @@ export default class AttribFC extends BaseFC {
      */
     getTabularAttributes (): Promise<any> {
         // TODO rethink how this works. is it better to read from attributes every time?
-        // TODO make sure we clear this cache if somehow attributes are nulled-out or timed refresh layer
-        if (this.tabularAttributesCache) {
-            return this.tabularAttributesCache;
+        if (this.attLoader.tabularAttributesCache) {
+            return this.attLoader.tabularAttributesCache;
         }
 
         // TODO after refactor, consider changing this to a warning and just return some dummy value
@@ -156,7 +154,7 @@ export default class AttribFC extends BaseFC {
         // TODO we could also wait on this.parentLayer.isLayerLoaded()
         //      but given FC's get created on the load event, it seems unlikely right now
         //      that anyone would be calling this pre-layer-load.
-        this.tabularAttributesCache = this.attLoader.getAttribs()
+        this.attLoader.tabularAttributesCache = this.attLoader.getAttribs()
             .then((attSet: AttributeSet) => {
                 // create columns array consumable by datables. We don't include the alias defined in the config here as
                 // the grid handles it seperately.
@@ -208,7 +206,7 @@ export default class AttribFC extends BaseFC {
                 };
             })
             .catch(e => {
-                this.tabularAttributesCache = undefined; // delete cached promise when the geoApi `getAttribs` call fails, so it will be requested again next time `getAttributes` is called;
+                this.attLoader.tabularAttributesCache = undefined; // delete cached promise when the geoApi `getAttribs` call fails, so it will be requested again next time `getAttributes` is called;
                 if (e === 'ABORTED') { // TODO see if we're still thowing an error with message ABORTED
                     throw new Error('ABORTED');
                 } else {
@@ -216,6 +214,6 @@ export default class AttribFC extends BaseFC {
                 }
             });
 
-        return this.tabularAttributesCache;
+        return this.attLoader.tabularAttributesCache;
     }
 }

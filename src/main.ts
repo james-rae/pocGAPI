@@ -45,6 +45,12 @@ gapiPromise.then((gapi: GeoApi) => {
     attProm.then((attResult: any) => {
       console.log('check out mah attributes', attResult);
     });
+
+    const tableAttProm = fancyLayer.getTabularAttributes();
+    tableAttProm.then((tattResult: any) => {
+      console.log('check out mah tabley attributes', tattResult);
+    });
+
   });
 
   // ------ geojson layer test --------
