@@ -32,6 +32,9 @@ export default class BaseLayer extends BaseBase {
     protected sawRefresh: boolean;
     protected name: string; // TODO re-evaluate this. using protected property here to store name until FCs get created. might be smarter way
     protected origRampConfig: RampLayerConfig;
+
+    // TODO consider also having a loaded boolean property, allowing a synch check if layer has loaded or not. state can flip around to update, etc.
+    //      alternately implement something like function layerLoaded() from old geoApi
     protected loadProimse: NaughtyPromise; // a promise that resolves when layer is fully ready and safe to use. for convenience of caller
     protected esriPromise: NaughtyPromise; // a promise that resolves when esri layer object has been created
 
@@ -287,6 +290,17 @@ export default class BaseLayer extends BaseBase {
      */
     setVisibility (value: boolean, layerIdx: number = undefined): void {
         this.getFC(layerIdx).setVisibility(value);
+    }
+
+    /**
+     * Indicates if a feature class supports features (false would be an image/raster/etc)
+     *
+     * @function supportsFeatures
+     * @param {Integer} [layerIdx] targets a layer index to get visibility for. Uses first/only if omitted.
+     * @returns {Boolean} if the layer/sublayer supports features
+     */
+    supportsFeatures (layerIdx: number = undefined): boolean {
+        return this.getFC(layerIdx).supportsFeatures;
     }
 
 }

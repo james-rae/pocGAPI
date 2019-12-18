@@ -58,5 +58,8 @@ export default class AttribLayer extends BaseLayer {
         return this.getFC(layerIdx).getTabularAttributes();
     }
 
+    getFeatureCount (layerIdx: number = undefined): number {
+        return this.getFC(layerIdx).featureCount;
+    }
 
 }

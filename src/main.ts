@@ -51,6 +51,8 @@ gapiPromise.then((gapi: GeoApi) => {
       console.log('check out mah tabley attributes', tattResult);
     });
 
+    console.log('check mah feature count', fancyLayer.getFeatureCount());
+
   });
 
   // ------ geojson layer test --------
@@ -79,6 +81,9 @@ gapiPromise.then((gapi: GeoApi) => {
     attProm.then((attResult: any) => {
       console.log('check out mah happy attributes', attResult);
     });
+
+    console.log('check mah happy feature count', happyLayer.getFeatureCount());
+
   });
 
   // ------ map image layer test --------

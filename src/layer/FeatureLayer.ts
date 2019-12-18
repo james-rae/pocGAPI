@@ -173,12 +173,8 @@ export default class FeatureLayer extends AttribLayer {
         });
         */
 
-        // TODO implement feature count
-        /*
-        const pFC = this.getFeatureCount().then(fc => {
-            this._fcount = fc;
-        });
-        */
+        const pFC = featFC.loadFeatureCount(layerUrl);
+
 
         // if file based (or server extent was fried), calculate extent based on geometry
         // TODO implement this. may need a manual loop to calculate graphicsExtent since ESRI torpedo'd the function
@@ -189,7 +185,7 @@ export default class FeatureLayer extends AttribLayer {
         */
 
         // TODO add back in promises
-        loadPromises.push(pLD); // , pFC, pLS
+        loadPromises.push(pLD, pFC); // , pLS
 
         return loadPromises;
     }

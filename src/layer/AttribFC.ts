@@ -12,7 +12,6 @@ export default class AttribFC extends BaseFC {
     geomType: string;
     layerType: string; // TODO revisit this. is value still useful?
     oidField: string;
-    supportsFeatures: boolean; // will be false for "raster layer" children in Map Image
     fields: Array<esri.Field>;
     nameField: string;
     extent: esri.Extent;
@@ -35,7 +34,7 @@ export default class AttribFC extends BaseFC {
     loadLayerMetadata(serviceUrl: string): Promise<void> {
 
         if (!serviceUrl) {
-            // case where a file class (who inherits this class) ends up calling this via .super magic.
+            // case where a non-server subclass ends up calling this via .super magic.
             // will avoid failed attempts at reading a non-existing service.
             // class should implement their own logic to load metadata (e.g. scrape from file layer)
             return Promise.resolve();
@@ -114,7 +113,7 @@ export default class AttribFC extends BaseFC {
                         this.attLoader = new ArcServerAttributeLoader(this.infoBundle(), loadData);
                     }
 
-                    // tell aller we are donethanks
+                    // tell caller we are donethanks
                     resolve();
                 } else {
                     // case where service request was successful but no data appeared in result
@@ -126,6 +125,57 @@ export default class AttribFC extends BaseFC {
                 // TODO investigate if this is proper location where EsriErrorDetails will appear
                 console.warn('Service metadata load error : ' + error.EsriErrorDetails || error);
                 reject(error);
+            });
+        });
+    }
+
+    loadFeatureCount(serviceUrl: string): Promise<void> {
+
+        if (!serviceUrl) {
+            // case where a non-server subclass ends up calling this via .super magic.
+            // will avoid failed attempts at reading a non-existing service.
+            // class should implement their own logic to load feature count (e.g. scrape from file layer)
+            return Promise.resolve();
+        }
+
+        // TODO detect when we are in Raster Layer case? if we do this, we would need the caller of this
+        //      function to wait on the loadLayerMetadata promise, then check this.supportsFeatures
+
+        return new Promise ((resolve, reject) => {
+
+            // extract info for this service
+            const restParam: esri.RequestOptions = {
+                query: {
+                    f: 'json',
+                    where: '1=1',
+                    returnCountOnly: true,
+                    returnGeometry: false
+                }
+            };
+            const restReq: IPromise<esri.RequestResponse> = this.esriBundle.esriRequest(`${serviceUrl}/query`, restParam);
+
+            // TODO revisit error handling. might need a try-catch?
+            // TODO have discussion about error case. app shouldnt bomb without count. but how to handle? ignore? show error? console error? special error count val e.g. -2
+            restReq.then((serviceResult: esri.RequestResponse) => {
+                if (serviceResult.data) {
+
+                    // TODO old geoApi had logic to execute web request twice; comment indicated first request could fail.
+                    //      re-apply this if we notice the same thing. sounds like garbage server problem tbh.
+                    // TODO need to decide on placeholder for unknown count.
+                    this.featureCount = serviceResult.data.count;
+
+                    // tell caller we are donethanks
+                    resolve();
+                } else {
+                    // case where service request was successful but no data appeared in result
+                    console.warn('Unable to load feature count: ' + serviceUrl);
+                    resolve();
+                }
+            }, error => {
+                // failed to load service info. reject with error
+                // TODO investigate if this is proper location where EsriErrorDetails will appear
+                console.warn('Unable to load feature count: ' + serviceUrl, error);
+                resolve();
             });
         });
     }

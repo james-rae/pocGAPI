@@ -2,7 +2,12 @@ import esri = __esri;
 import { InfoBundle, EpsgLookup, RampSpatialReference } from '../gapiTypes';
 import BaseBase from '../BaseBase';
 import { Tools } from 'terraformer';
-import proj4 from 'proj4'; // TODO we may need proj4 as part of infoBundle; could need to be an instance since we register new projections on it. need to test with adding then checking in separate calls
+
+// since ProjectionService is now a class instead a stateless service, it appears that the proj4 library is maintaining it's state
+// (i.e. if we add defs in one function, they remain available in other functions).
+// I think as long as we keep all the proj4 activity to this module (which makes sense) we'll be ok.
+// If things start to get squirrly, consider instantiating proj4 at geoApi startup and adding it to the infoBundle to make it available.
+import proj4 from 'proj4';
 
 // this was old way, might need to do this?
 /*
@@ -14,7 +19,6 @@ export default class ProjectionService extends BaseBase {
 
     protected espgWorker: EpsgLookup;
 
-    // TODO probably need a epsgLookup function getting passed into here.
     constructor (infoBundle: InfoBundle, epsgFunction: EpsgLookup = undefined) {
         super(infoBundle);
         if (epsgFunction) {
