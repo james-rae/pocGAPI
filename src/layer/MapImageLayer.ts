@@ -4,6 +4,8 @@
 import esri = __esri;
 import { InfoBundle, LayerState, RampLayerConfig, RampLayerMapImageLayerEntryConfig } from '../gapiTypes';
 import AttribLayer from './AttribLayer';
+import TreeNode from './TreeNode';
+import MapImageFC from './MapImageFC';
 
 // Formerly known as DynamicLayer
 export default class MapImageLayer extends AttribLayer {
@@ -49,7 +51,13 @@ export default class MapImageLayer extends AttribLayer {
 
         */
 
-        // process sublayers
+        // IMPORTANT NOTE: do not set esriConfig.sublayers here.
+        //                 it will defeat our auto-crawl behavior of sublayer trees.
+        //                 if we do decide we need to leverage sublayer initialization on the layer constructor,
+        //                 we would need to query the service root and extract the tree structure from there
+        //                 prior to running this function. essentially do tree traversal before this instead
+        //                 of on onLoadActions like we currently do.
+        /*
         if (rampLayerConfig.layerEntries) {
             // NOTE: important not to set esriConfig property to empty array, as that will request no sublayers
             // TODO documentation isn't clear if we should be using .sublayers or .allSublayers ; if .sublayers can it be flat array?
@@ -65,6 +73,7 @@ export default class MapImageLayer extends AttribLayer {
                 return subby;
             })
         }
+        */
 
         return esriConfig;
     }
@@ -82,8 +91,6 @@ export default class MapImageLayer extends AttribLayer {
         //      could double up with the default-name logic which does the same, though it only runs if required.
         // this._isTrueDynamic = this._layer.supportsDynamicLayers;
 
-        /* TODO IMPLEMENT
-
         // TODO the whole "configIsComplete" logic in RAMP2 was never invoked by the client.
         //      Don't see the point in re-adding it here.
 
@@ -93,17 +100,10 @@ export default class MapImageLayer extends AttribLayer {
             return JSON.parse(JSON.stringify(inputObject));
         };
 
-
-
         // don't worry about structured legend. the legend part is separate from
         // the layers part. we just load what we are told to. the legend module
         // will handle the structured part.
 
-        // see comments on the constructor to learn about _configIsComplete and
-        // what type of scenarios you can expect for incoming configs
-
-        // snapshot doesn't apply to child layers
-        // we don't include bounding box / extent, as we are inheriting it.
         // a lack of the property means we use the layer definition
         const dummyState = {
             opacity: 1,
@@ -118,6 +118,7 @@ export default class MapImageLayer extends AttribLayer {
         //  but is being done as a quick n dirty workaround. At a later time,
         // the guts of this function can be re-examined for a better,
         // less hardcoded solution.
+        /*
         const cloneConfig = origConfig => {
             const clone = {};
 
@@ -151,15 +152,13 @@ export default class MapImageLayer extends AttribLayer {
 
             return clone;
         };
+        */
 
         // collate any relevant overrides from the config.
-        const subConfigs = {};
+        const subConfigs: {[key: number]: RampLayerMapImageLayerEntryConfig} = {};
 
-        this.config.layerEntries.forEach(le => {
-            subConfigs[le.index.toString()] = {
-                config: cloneConfig(le),
-                defaulted: this._configIsComplete
-            };
+        (<Array<RampLayerMapImageLayerEntryConfig>>this.origRampConfig.layerEntries).forEach((le: RampLayerMapImageLayerEntryConfig) => {
+            subConfigs[le.index] = le;
         });
 
         // subfunction to return a subconfig object.
@@ -202,60 +201,52 @@ export default class MapImageLayer extends AttribLayer {
         // in the loading process
         const leafsToInit = [];
 
-        // this subfunction will recursively crawl a dynamic layerInfo structure.
-        // it will generate proxy objects for all groups and leafs under the
-        // input layerInfo.
-        // we also generate a tree structure of layerInfos that is in a format
+        // this subfunction will recursively crawl a sublayer structure.
+        // it will generate FCs for all leafs under the sublayer
+        // we also generate a tree structure of our layer that is in a format
         // that makes the client happy
-        const processLayerInfo = (layerInfo, treeArray) => {
-            const sId = layerInfo.id.toString();
-            const subC = fetchSubConfig(sId, layerInfo.name);
+        const processSublayer = (subLayer: esri.Sublayer, parentTreeNode: TreeNode): void => {
+            const sid: number = subLayer.id;
+            const subC: RampLayerMapImageLayerEntryConfig = subConfigs[sid];
 
-            if (layerInfo.subLayerIds && layerInfo.subLayerIds.length > 0) {
+            if (subLayer.sublayers && subLayer.sublayers.length > 0) {
                 // group sublayer. set up our tree for the client, then crawl childs.
-
-                const treeGroup = {
-                    entryIndex: layerInfo.id,
-                    name: subC.name,
-                    childs: []
-                };
-                treeArray.push(treeGroup);
+                const gName = subC ? subC.name : '' || subLayer.title || ''; // config if exists, else server, else none
+                const treeGroup = new TreeNode(sid, gName, false);
+                parentTreeNode.childs.push(treeGroup);
 
                 // process the kids in the group.
-                // store the child leaves in the internal variable
-                layerInfo.subLayerIds.forEach(slid => {
-                    processLayerInfo(this._layer.layerInfos.find(li => li.id === slid), treeGroup.childs);
+                subLayer.sublayers.forEach((subSubLayer: esri.Sublayer) => {
+                    processSublayer(subSubLayer, treeGroup);
                 });
 
             } else {
                 // leaf sublayer. make placeholders, add leaf to the tree
-
-                const pfc = new placeholderFC.PlaceholderFC(this, subC.name);
-                if (this._proxies[sId]) {
-                    // we have a pre-made proxy (structured legend). update it.
-                    this._proxies[sId].updateSource(pfc);
-                } else {
-                    // set up new proxy
-                    const leafProxy = new layerInterface.LayerInterface(null);
-                    leafProxy.convertToPlaceholder(pfc);
-                    this._proxies[sId] = leafProxy;
+                if (!this.fcs[sid]) {
+                    const miFC = new MapImageFC(this.infoBundle(), this, sid);
+                    const lName = subC ? subC.name : '' || subLayer.title || ''; // config if exists, else server, else none
+                    miFC.name = lName;
+                    this.fcs[sid] = miFC;
+                    leafsToInit.push(miFC);
                 }
 
-                treeArray.push({ entryIndex: layerInfo.id });
-                leafsToInit.push(layerInfo.id.toString());
+                const treeLeaf = new TreeNode(sid, this.fcs[sid].name, true);
+                parentTreeNode.childs.push(treeLeaf);
             }
         };
 
-        this._childTree = []; // public structure describing the tree
+        // TODO validate -1 is how we are notating a map image layer root (effectively service folder, no real index)
+        this.layerTree = new TreeNode(-1, this.origRampConfig.name, false); // public structure describing the tree
 
         // process the child layers our config is interested in, and all their children.
-        if (this.config.layerEntries) {
-            this.config.layerEntries.forEach(le => {
-                if (!le.stateOnly) {
-                    processLayerInfo(this._layer.layerInfos.find(li => li.id === le.index), this._childTree);
-                }
-            });
-        }
+        (<Array<RampLayerMapImageLayerEntryConfig>>this.origRampConfig.layerEntries).forEach((le: RampLayerMapImageLayerEntryConfig) => {
+            if (!le.stateOnly) {
+                const rootSub: esri.Sublayer = (<esri.MapImageLayer>this.innerLayer).allSublayers.find((s: esri.Sublayer) => {
+                    return s.id === le.index;
+                });
+                processSublayer(rootSub, this.layerTree);
+            }
+        });
 
         // converts server layer type string to client layer type string
         const serverLayerTypeToClientLayerType = serverType => {
@@ -364,11 +355,11 @@ export default class MapImageLayer extends AttribLayer {
             });
             const setTitle = defService.then(serviceResult => {
                 this.name = serviceResult.mapName;
+                // TODO should also update the tree root name here
             });
             loadPromises.push(setTitle);
         }
 
-        */
 
         // TODO add back in promises
         // loadPromises.push(pLD, pFC, pLS);
