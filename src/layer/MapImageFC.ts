@@ -12,6 +12,7 @@ export default class MapImageFC extends AttribFC {
     }
 
     protected innerSubLayer(): esri.Sublayer {
+        // TODO fix, cannot guarantee array order, likely need to search
         return (<esri.MapImageLayer>this.parentLayer.innerLayer).sublayers[this.layerIdx];
     }
 
