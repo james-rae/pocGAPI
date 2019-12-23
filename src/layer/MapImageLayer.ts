@@ -242,7 +242,7 @@ export default class MapImageLayer extends AttribLayer {
 
             if (subLayer.sublayers && subLayer.sublayers.length > 0) {
                 // group sublayer. set up our tree for the client, then crawl childs.
-                const gName = subC ? subC.name : '' || subLayer.title || ''; // config if exists, else server, else none
+                const gName = (subC ? subC.name : '') || subLayer.title || ''; // config if exists, else server, else none
                 const treeGroup = new TreeNode(sid, gName, false);
                 parentTreeNode.childs.push(treeGroup);
 
@@ -255,7 +255,7 @@ export default class MapImageLayer extends AttribLayer {
                 // leaf sublayer. make placeholders, add leaf to the tree
                 if (!this.fcs[sid]) {
                     const miFC = new MapImageFC(this.infoBundle(), this, sid);
-                    const lName = subC ? subC.name : '' || subLayer.title || ''; // config if exists, else server, else none
+                    const lName = (subC ? subC.name : '') || subLayer.title || ''; // config if exists, else server, else none
                     miFC.name = lName;
                     this.fcs[sid] = miFC;
                     leafsToInit.push(miFC);
@@ -330,6 +330,14 @@ export default class MapImageLayer extends AttribLayer {
 
             loadPromises.push(pLMD);
 
+        });
+
+        // any sublayers not in our tree, we need to turn off.
+        this.typedInnerLayer().allSublayers.forEach((s: esri.Sublayer) => {
+            // find sublayers that are not groups, and dont exist in our initilazation array
+            if (!s.sublayers && !leafsToInit.find((fc: MapImageFC) => fc.layerIdx === s.id)) {
+                s.visible = false;
+            }
         });
 
         // get mapName of the legend entry from the service to use as the name if not provided in config

@@ -114,6 +114,7 @@ gapiPromise.then((gapi: GeoApi) => {
 
   imgLayer.isLayerLoaded().then(() => {
     // test fun times
+
     console.log('saw layer load, attempt attrib load');
     const attProm = imgLayer.getAttributes(6);
     attProm.then((attResult: any) => {
@@ -126,5 +127,9 @@ gapiPromise.then((gapi: GeoApi) => {
     });
 
     console.log('check mah feature count', imgLayer.getFeatureCount(6));
+
+
+    console.log('merry tree', imgLayer.getLayerTree());
+
   })
 });
