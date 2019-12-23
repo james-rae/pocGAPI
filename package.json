@@ -30,7 +30,7 @@
     "@babel/plugin-proposal-object-rest-spread": "^7.4.0",
     "@babel/preset-env": "^7.4.1",
     "@babel/preset-typescript": "^7.3.3",
-    "@types/arcgis-js-api": "~4.13.0",
+    "@types/arcgis-js-api": "~4.14.0",
     "@types/dojo": "^1.9.41",
     "@types/node": "7.0.0",
     "@types/proj4": "2.5.0",

@@ -7,8 +7,9 @@ import GapiLoader from './gapi';
 import Map from './map/Map';
 import FeatureLayer from './layer/FeatureLayer';
 import GeoJsonLayer from './layer/GeoJsonLayer';
+import MapImageLayer from './layer/MapImageLayer';
 
-const gapiPromise: Promise<GeoApi> = GapiLoader('https://js.arcgis.com/4.13', window);
+const gapiPromise: Promise<GeoApi> = GapiLoader('https://js.arcgis.com/4.14', window);
 
 gapiPromise.then((gapi: GeoApi) => {
   console.log('GeoAPI Loaded', gapi);
@@ -22,7 +23,7 @@ gapiPromise.then((gapi: GeoApi) => {
 
 
   // ------ feature layer test --------
-
+/*
   const rampFeatureLayerConfig = {
     id: 'fancyTest',
     url: 'http://maps-cartes.ec.gc.ca/arcgis/rest/services/EcoGeo/EcoGeo/MapServer/6',
@@ -34,7 +35,7 @@ gapiPromise.then((gapi: GeoApi) => {
 
   const fancyLayer: FeatureLayer = gapi.layers.createFeatureLayer(rampFeatureLayerConfig);
 
-  fancyLayer.stateChanged.listen((mahState: string) => { console.log('RESPECT MAH STATE: ' + mahState); });
+  fancyLayer.stateChanged.listen((mahState: string) => { console.log('RESPECT MAH FEATURE STATE: ' + mahState); });
 
   map.addLayer(fancyLayer);
 
@@ -54,9 +55,9 @@ gapiPromise.then((gapi: GeoApi) => {
     console.log('check mah feature count', fancyLayer.getFeatureCount());
 
   });
-
+*/
   // ------ geojson layer test --------
-
+/*
   const rampHappyLayerConfig = {
     id: 'happyTest',
     state: {
@@ -72,6 +73,9 @@ gapiPromise.then((gapi: GeoApi) => {
   };
 
   const happyLayer: GeoJsonLayer = gapi.layers.createGeoJSONLayer(rampHappyLayerConfig , happy, systemMagic);
+
+  happyLayer.stateChanged.listen((mahState: string) => { console.log('RESPECT MAH GEOJSON STATE: ' + mahState); });
+
   map.addLayer(happyLayer);
 
   happyLayer.isLayerLoaded().then(() => {
@@ -85,20 +89,42 @@ gapiPromise.then((gapi: GeoApi) => {
     console.log('check mah happy feature count', happyLayer.getFeatureCount());
 
   });
-
+*/
   // ------ map image layer test --------
 
   const rampMapImageLayerConfig = {
     id: 'extraFancyTest',
     name: 'I was once called Dynamic',
     layerType: 'esriDynamic', // TODO change this keyvalue?
-    layerEntries: [{ index: 21 }, { index: 17 }, { index: 19 }],
-    disabledControls: ['opacity', 'visibility'],
+    // layerEntries: [{ index: 21 }, { index: 17 }, { index: 19 }],
+    layerEntries: [{ index: 3, state: {} }, { index: 6, state: {} }],
     state: {
-      opacity: 0,
-      visibility: false
+      opacity: 1,
+      visibility: true
     },
-    url: 'http://geoappext.nrcan.gc.ca/arcgis/rest/services/NACEI/energy_infrastructure_of_north_america_en/MapServer'
+    // url: 'http://geoappext.nrcan.gc.ca/arcgis/rest/services/NACEI/energy_infrastructure_of_north_america_en/MapServer'
+    url: 'http://maps-cartes.ec.gc.ca/arcgis/rest/services/EcoGeo/EcoGeo/MapServer'
   };
 
+  const imgLayer: MapImageLayer = gapi.layers.createMapImageLayer(rampMapImageLayerConfig);
+
+  imgLayer.stateChanged.listen((mahState: string) => { console.log('RESPECT MAH IMAGE STATE: ' + mahState); });
+
+  map.addLayer(imgLayer);
+
+  imgLayer.isLayerLoaded().then(() => {
+    // test fun times
+    console.log('saw layer load, attempt attrib load');
+    const attProm = imgLayer.getAttributes(6);
+    attProm.then((attResult: any) => {
+      console.log('check out mah attributes', attResult);
+    });
+
+    const tableAttProm = imgLayer.getTabularAttributes(6);
+    tableAttProm.then((tattResult: any) => {
+      console.log('check out mah tabley attributes', tattResult);
+    });
+
+    console.log('check mah feature count', imgLayer.getFeatureCount(6));
+  })
 });

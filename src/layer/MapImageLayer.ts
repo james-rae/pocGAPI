@@ -2,7 +2,7 @@
 
 
 import esri = __esri;
-import { InfoBundle, LayerState, RampLayerConfig, RampLayerMapImageLayerEntryConfig } from '../gapiTypes';
+import { InfoBundle, LayerState, RampLayerConfig, RampLayerMapImageLayerEntryConfig, AttributeSet } from '../gapiTypes';
 import AttribLayer from './AttribLayer';
 import TreeNode from './TreeNode';
 import MapImageFC from './MapImageFC';
@@ -13,7 +13,7 @@ export default class MapImageLayer extends AttribLayer {
     // indicates if sublayers can have opacity adjusted
     isDynamic: boolean;
 
-    constructor (infoBundle: InfoBundle, config: RampLayerConfig, targetDiv: string) {
+    constructor (infoBundle: InfoBundle, config: RampLayerConfig) {
 
         super(infoBundle, config);
 
@@ -352,6 +352,81 @@ export default class MapImageLayer extends AttribLayer {
         // loadPromises.push(pLD, pFC, pLS);
 
         return loadPromises;
+    }
+
+    // ----------- LAYER MANAGEMENT -----------
+    // Map Image Layer is an oddball, because the parent has state that is different from the state of the children.
+    // so for properties that fall into this category, we intercept the common routies, and treat an undefined
+    // layerIdx as targeting the layer proper (in other layers, undefined means take the default child)
+
+    getName (layerIdx: number = undefined): string {
+        if (this.isUn(layerIdx)) {
+            return this.name;
+        } else {
+            return super.getName(layerIdx);
+        }
+    }
+
+    /**
+     * Returns the visibility of the layer/sublayer.
+     *
+     * @function getVisibility
+     * @param {Integer} [layerIdx] targets a layer index to get visibility for. Uses first/only if omitted.
+     * @returns {Boolean} visibility of the layer/sublayer
+     */
+    getVisibility (layerIdx: number = undefined): boolean {
+        if (this.isUn(layerIdx)) {
+            return this.innerLayer.visible;
+        } else {
+            return super.getVisibility(layerIdx);
+        }
+    }
+
+    /**
+     * Applies visibility to feature class.
+     *
+     * @function setVisibility
+     * @param {Boolean} value the new visibility setting
+     * @param {Integer} [layerIdx] targets a layer index to get visibility for. Uses first/only if omitted.
+     */
+    setVisibility (value: boolean, layerIdx: number = undefined): void {
+        if (this.isUn(layerIdx)) {
+            this.innerLayer.visible = value;
+        } else {
+            super.setVisibility(value, layerIdx);
+        }
+    }
+
+    private needChildErrorCheck(layerIdx: number, methodName: string): void {
+        if (this.isUn(layerIdx)) {
+            throw new Error(`Attempted to call ${methodName} on Map Image Layer with no layerIdx specified. This method does not apply to the root layer`);
+        }
+    }
+
+    getAttributes (layerIdx: number = undefined): Promise<AttributeSet> {
+        this.needChildErrorCheck(layerIdx, 'getAttributes');
+        return super.getAttributes(layerIdx);
+    }
+
+    abortAttributeLoad (layerIdx: number = undefined): void {
+        this.needChildErrorCheck(layerIdx, 'abortAttributeLoad');
+        return super.abortAttributeLoad(layerIdx);
+    }
+
+    destroyAttributes (layerIdx: number = undefined): void {
+        this.needChildErrorCheck(layerIdx, 'destroyAttributes');
+        return super.destroyAttributes(layerIdx);
+    }
+
+    // formerly known as getFormattedAttributes
+    getTabularAttributes (layerIdx: number = undefined): Promise<AttributeSet> {
+        this.needChildErrorCheck(layerIdx, 'getTabularAttributes');
+        return super.getTabularAttributes(layerIdx);
+    }
+
+    getFeatureCount (layerIdx: number = undefined): number {
+        this.needChildErrorCheck(layerIdx, 'getFeatureCount');
+        return super.getFeatureCount(layerIdx);
     }
 
 }

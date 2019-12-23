@@ -8,6 +8,7 @@ import FeatureLayer from './FeatureLayer';
 import HighlightLayer from './HighlightLayer';
 import FileUtils from './FileUtils';
 import GeoJsonLayer from './GeoJsonLayer';
+import MapImageLayer from './MapImageLayer';
 // import Map from './Map';
 
 export default class LayerModule extends BaseBase {
@@ -31,6 +32,11 @@ export default class LayerModule extends BaseBase {
     // systemOptions is a work in progress. make a nice type when solidified. will contain optional stuff that wouldnt be in the ramp config, like current map spatial reference
     createGeoJSONLayer(config: RampLayerConfig, geoJson: any, systemOptions: any): GeoJsonLayer {
         return new GeoJsonLayer(this.infoBundle(), config, geoJson, systemOptions);
+    }
+
+    createMapImageLayer(config: RampLayerConfig): MapImageLayer {
+        const l = new MapImageLayer(this.infoBundle(), config);
+        return l;
     }
 
     createHighlightLayer(options: any): HighlightLayer {
