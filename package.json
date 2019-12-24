@@ -20,7 +20,8 @@
   "author": "Good ol James & Jahid, with scaffold from our fine buddy Juri Strumpflohner",
   "license": "ISC",
   "dependencies": {
-    "js-sql-parser": "1.0.7"
+    "js-sql-parser": "1.0.7",
+    "svg.js": "2.7.1"
   },
   "devDependencies": {
     "@babel/cli": "^7.2.3",
