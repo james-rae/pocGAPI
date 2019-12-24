@@ -11,4 +11,9 @@ export default class MapImageFC extends AttribFC {
         super(infoBundle, parent, layerIdx);
     }
 
+    protected innerSubLayer(): esri.Sublayer {
+        // TODO fix, cannot guarantee array order, likely need to search
+        return (<esri.MapImageLayer>this.parentLayer.innerLayer).sublayers[this.layerIdx];
+    }
+
 }

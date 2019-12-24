@@ -140,6 +140,31 @@ export interface RampLayerFieldMetadataConfig {
     alias?: string;
 }
 
+// i.e. a dynamic layer child
+export interface RampLayerMapImageLayerEntryConfig { // A+ name
+    index?: number;
+    name?: string;
+    nameField?: string;
+    outfields?: string; // TODO tbd if we keep this
+    state?: RampLayerStateConfig;
+    // following items need to be flushed out
+    extent?: any;
+    controls?:  any;
+    stateOnly?:  any;
+    table?:  any;
+    fieldMetadata?:  any;
+}
+
+// i.e. a wms layer child
+export interface RampLayerWmsLayerEntryConfig {
+    index?: number;
+    name?: string;
+    state?: RampLayerStateConfig;
+    // following items need to be flushed out
+    controls?:  any;
+    // more...
+}
+
 export interface RampLayerConfig {
     id?: string;
     url?: string;
@@ -151,4 +176,5 @@ export interface RampLayerConfig {
     fieldMetadata?: Array<RampLayerFieldMetadataConfig>;
     nameField?: string;
     tooltipField?: string;
+    layerEntries?: Array<RampLayerMapImageLayerEntryConfig> | Array<RampLayerWmsLayerEntryConfig>;
 }

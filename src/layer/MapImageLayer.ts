@@ -2,17 +2,20 @@
 
 
 import esri = __esri;
-import { InfoBundle, LayerState, RampLayerConfig } from '../gapiTypes';
+import { InfoBundle, LayerState, RampLayerConfig, RampLayerMapImageLayerEntryConfig, AttributeSet } from '../gapiTypes';
 import AttribLayer from './AttribLayer';
+import TreeNode from './TreeNode';
+import MapImageFC from './MapImageFC';
 
 // Formerly known as DynamicLayer
 export default class MapImageLayer extends AttribLayer {
 
-    constructor (infoBundle: InfoBundle, config: RampLayerConfig, targetDiv: string) {
-        // TODO massage incoming config to something that conforms to esri.MapProperties interface
-        const esriConfig = config; // this becomes real logic
+    // indicates if sublayers can have opacity adjusted
+    isDynamic: boolean;
 
-        super(infoBundle, esriConfig);
+    constructor (infoBundle: InfoBundle, config: RampLayerConfig) {
+
+        super(infoBundle, config);
 
         this.innerLayer = new this.esriBundle.MapImageLayer(this.makeEsriLayerConfig(config));
 
@@ -20,7 +23,12 @@ export default class MapImageLayer extends AttribLayer {
 
     }
 
- /**
+    // timesaver, sick of casting this var everywhere
+    protected typedInnerLayer() :esri.MapImageLayer {
+        return (<esri.MapImageLayer>this.innerLayer);
+    }
+
+    /**
      * Take a layer config from the RAMP application and derives a configuration for an ESRI layer
      *
      * @param rampLayerConfig snippet from RAMP for this layer
@@ -34,6 +42,9 @@ export default class MapImageLayer extends AttribLayer {
 
         // TODO add any extra properties for attrib-based layers here
         // if we have a definition at load, apply it here to avoid cancellation errors on
+
+        // override. make things invisible, revert to config setting after sublayers have been assigned visibilities and load finishes.
+        esriConfig.visible = false;
 
         /*
         const rampMapImageLayerConfig = {
@@ -51,6 +62,30 @@ export default class MapImageLayer extends AttribLayer {
 
         */
 
+        // IMPORTANT NOTE: do not set esriConfig.sublayers here.
+        //                 it will defeat our auto-crawl behavior of sublayer trees.
+        //                 if we do decide we need to leverage sublayer initialization on the layer constructor,
+        //                 we would need to query the service root and extract the tree structure from there
+        //                 prior to running this function. essentially do tree traversal before this instead
+        //                 of on onLoadActions like we currently do.
+        /*
+        if (rampLayerConfig.layerEntries) {
+            // NOTE: important not to set esriConfig property to empty array, as that will request no sublayers
+            // TODO documentation isn't clear if we should be using .sublayers or .allSublayers ; if .sublayers can it be flat array?
+            //      play with their online sandbox using a nested service if cant figure it out.
+            // let us all stop to appreciate this line of code.
+            esriConfig.sublayers = (<Array<RampLayerMapImageLayerEntryConfig>>rampLayerConfig.layerEntries).map((le: RampLayerMapImageLayerEntryConfig) => {
+                // the super call will set up the basics/common stuff like vis, opacity, def query
+                // works because the sublayer property scheme is nearly identical to a normal layer
+                const subby: esri.SublayerProperties = super.makeEsriLayerConfig(le);
+                subby.id = le.index;
+
+                // TODO process the other options
+                return subby;
+            })
+        }
+        */
+
         return esriConfig;
     }
 
@@ -61,7 +96,20 @@ export default class MapImageLayer extends AttribLayer {
      */
     onLoadActions (): Array<Promise<void>> {
         const loadPromises: Array<Promise<void>> = super.onLoadActions();
-        /* TODO IMPLEMENT
+
+        // a trick. this promise wont resolve until all the loading things have finished.
+        // then we revert the layer visibility back to what the config wanted.
+        // avoids multiple re-draws as child visibilities get set up.
+        // so really the inner statement runs after everything else in this
+        // function is done.
+        this.isLayerLoaded().then(() => {
+            this.setVisibility(this.origRampConfig.state.visibility);
+        });
+
+        this.isDynamic = this.typedInnerLayer().capabilities.exportMap.supportsDynamicLayers;
+
+        // TODO the whole "configIsComplete" logic in RAMP2 was never invoked by the client.
+        //      Don't see the point in re-adding it here.
 
         // we run into a lot of funny business with functions/constructors modifying parameters.
         // this essentially clones an object to protect original objects against trickery.
@@ -69,23 +117,27 @@ export default class MapImageLayer extends AttribLayer {
             return JSON.parse(JSON.stringify(inputObject));
         };
 
-        this._isTrueDynamic = this._layer.supportsDynamicLayers;
+        const findSublayer = (targetIndex: number): esri.Sublayer => {
+            return this.typedInnerLayer().allSublayers.find((s: esri.Sublayer) => {
+                return s.id === targetIndex;
+            });
+        }
 
         // don't worry about structured legend. the legend part is separate from
         // the layers part. we just load what we are told to. the legend module
         // will handle the structured part.
 
-        // see comments on the constructor to learn about _configIsComplete and
-        // what type of scenarios you can expect for incoming configs
-
-        // snapshot doesn't apply to child layers
-        // we don't include bounding box / extent, as we are inheriting it.
         // a lack of the property means we use the layer definition
+        /*
         const dummyState = {
             opacity: 1,
             visibility: false,
             query: false
         };
+        */
+
+        // TODO take another look at the query flag coming in from the config. figure out how we track all identifiable layers
+        //      and make sure they get turned off/on according to settings
 
         // subfunction to clone a layerEntries config object.
         // since we are using typed objects with getters and setters,
@@ -94,6 +146,7 @@ export default class MapImageLayer extends AttribLayer {
         //  but is being done as a quick n dirty workaround. At a later time,
         // the guts of this function can be re-examined for a better,
         // less hardcoded solution.
+        /*
         const cloneConfig = origConfig => {
             const clone = {};
 
@@ -127,20 +180,20 @@ export default class MapImageLayer extends AttribLayer {
 
             return clone;
         };
+        */
 
         // collate any relevant overrides from the config.
-        const subConfigs = {};
+        const subConfigs: {[key: number]: RampLayerMapImageLayerEntryConfig} = {};
 
-        this.config.layerEntries.forEach(le => {
-            subConfigs[le.index.toString()] = {
-                config: cloneConfig(le),
-                defaulted: this._configIsComplete
-            };
+        (<Array<RampLayerMapImageLayerEntryConfig>>this.origRampConfig.layerEntries).forEach((le: RampLayerMapImageLayerEntryConfig) => {
+            subConfigs[le.index] = le;
         });
 
         // subfunction to return a subconfig object.
         // if it does not exist or is not defaulted, will do that first
         // id param is an integer in string format
+
+        /*
         const fetchSubConfig = (id, serverName = '') => {
 
             if (subConfigs[id]) {
@@ -173,66 +226,59 @@ export default class MapImageLayer extends AttribLayer {
                 return newConfig;
             }
         };
+        */
 
         // shortcut var to track all leafs that need attention
         // in the loading process
-        const leafsToInit = [];
+        const leafsToInit: Array<MapImageFC> = [];
 
-        // this subfunction will recursively crawl a dynamic layerInfo structure.
-        // it will generate proxy objects for all groups and leafs under the
-        // input layerInfo.
-        // we also generate a tree structure of layerInfos that is in a format
+        // this subfunction will recursively crawl a sublayer structure.
+        // it will generate FCs for all leafs under the sublayer
+        // we also generate a tree structure of our layer that is in a format
         // that makes the client happy
-        const processLayerInfo = (layerInfo, treeArray) => {
-            const sId = layerInfo.id.toString();
-            const subC = fetchSubConfig(sId, layerInfo.name);
+        const processSublayer = (subLayer: esri.Sublayer, parentTreeNode: TreeNode): void => {
+            const sid: number = subLayer.id;
+            const subC: RampLayerMapImageLayerEntryConfig = subConfigs[sid];
 
-            if (layerInfo.subLayerIds && layerInfo.subLayerIds.length > 0) {
+            if (subLayer.sublayers && subLayer.sublayers.length > 0) {
                 // group sublayer. set up our tree for the client, then crawl childs.
-
-                const treeGroup = {
-                    entryIndex: layerInfo.id,
-                    name: subC.name,
-                    childs: []
-                };
-                treeArray.push(treeGroup);
+                const gName = (subC ? subC.name : '') || subLayer.title || ''; // config if exists, else server, else none
+                const treeGroup = new TreeNode(sid, gName, false);
+                parentTreeNode.childs.push(treeGroup);
 
                 // process the kids in the group.
-                // store the child leaves in the internal variable
-                layerInfo.subLayerIds.forEach(slid => {
-                    processLayerInfo(this._layer.layerInfos.find(li => li.id === slid), treeGroup.childs);
+                subLayer.sublayers.forEach((subSubLayer: esri.Sublayer) => {
+                    processSublayer(subSubLayer, treeGroup);
                 });
 
             } else {
                 // leaf sublayer. make placeholders, add leaf to the tree
-
-                const pfc = new placeholderFC.PlaceholderFC(this, subC.name);
-                if (this._proxies[sId]) {
-                    // we have a pre-made proxy (structured legend). update it.
-                    this._proxies[sId].updateSource(pfc);
-                } else {
-                    // set up new proxy
-                    const leafProxy = new layerInterface.LayerInterface(null);
-                    leafProxy.convertToPlaceholder(pfc);
-                    this._proxies[sId] = leafProxy;
+                if (!this.fcs[sid]) {
+                    const miFC = new MapImageFC(this.infoBundle(), this, sid);
+                    const lName = (subC ? subC.name : '') || subLayer.title || ''; // config if exists, else server, else none
+                    miFC.name = lName;
+                    this.fcs[sid] = miFC;
+                    leafsToInit.push(miFC);
                 }
 
-                treeArray.push({ entryIndex: layerInfo.id });
-                leafsToInit.push(layerInfo.id.toString());
+                const treeLeaf = new TreeNode(sid, this.fcs[sid].name, true);
+                parentTreeNode.childs.push(treeLeaf);
             }
         };
 
-        this._childTree = []; // public structure describing the tree
+        // TODO validate -1 is how we are notating a map image layer root (effectively service folder, no real index)
+        this.layerTree = new TreeNode(-1, this.origRampConfig.name, false); // public structure describing the tree
 
         // process the child layers our config is interested in, and all their children.
-        if (this.config.layerEntries) {
-            this.config.layerEntries.forEach(le => {
-                if (!le.stateOnly) {
-                    processLayerInfo(this._layer.layerInfos.find(li => li.id === le.index), this._childTree);
-                }
-            });
-        }
+        (<Array<RampLayerMapImageLayerEntryConfig>>this.origRampConfig.layerEntries).forEach((le: RampLayerMapImageLayerEntryConfig) => {
+            if (!le.stateOnly) {
+                const rootSub: esri.Sublayer = findSublayer(le.index);
+                processSublayer(rootSub, this.layerTree);
+            }
+        });
 
+        // TODO figure out what we're doing with layer types
+        /*
         // converts server layer type string to client layer type string
         const serverLayerTypeToClientLayerType = serverType => {
             switch (serverType) {
@@ -245,111 +291,150 @@ export default class MapImageLayer extends AttribLayer {
                     return shared.clientLayerType.UNKNOWN;
             }
         };
+        */
 
-        // process each leaf we walked to in the processLayerInfo loop above
-        // idx is a string
-        leafsToInit.forEach(idx => {
+        // process each leaf FC we walked to in the sublayer tree crawl above
+        leafsToInit.forEach((mlFC: MapImageFC) => {
 
-            const subC = subConfigs[idx].config;
-            const attribPackage = this._apiRef.attribs.loadServerAttribs(this._layer.url, idx, subC.outfields);
-            const dFC = new dynamicFC.DynamicFC(this, idx, attribPackage, subC);
-            dFC.highlightFeature = subC.highlightFeature;
-            this._featClasses[idx] = dFC;
+            // NOTE: can consider alternates, like innerLayer.url + / + layerIdx
+            const serviceUrl: string = findSublayer(mlFC.layerIdx).url;
+            const pLMD: Promise<void> = mlFC.loadLayerMetadata(serviceUrl).then(() => {
+                // apply any updates that were in the configuration snippets
+                const subC: RampLayerMapImageLayerEntryConfig = subConfigs[mlFC.layerIdx];
+                if (subC) {
+                    mlFC.setVisibility(subC.state.visibility); // TODO do we need an init flag? perhaps the layer will already be invisible while this is getting set
+                    if (!this.isUn(subC.state.opacity)) {
+                        // mlFC.setOpacity(subC.state.opacity); // TODO uncomment when opacity is coded
+                    }
+                    // mlFC.setQueryable(subC.state.query); // TODO uncomment when done
+                } else {
+                    // pulling from parent would be cool, but complex. all the promises would need to be resolved in tree-order
+                    // maybe put defaulting here for visible/opac/query
+                }
 
-            // if we have a proxy watching this leaf, replace its placeholder with the real data
-            const leafProxy = this._proxies[idx];
-            if (leafProxy) {
-                leafProxy.convertToDynamicLeaf(dFC);
-            }
+                // TODO figure out what we're doing with layer types
+                //      i believe load metadata is setting this now anyways
+                // dFC.layerType = serverLayerTypeToClientLayerType(ld.layerType);
 
+                // feature count if valid
+                if (mlFC.supportsFeatures) {
+                    return mlFC.loadFeatureCount(serviceUrl);
+                } else {
+                    return Promise.resolve();
+                }
+            });
+
+            // TODO.  might need to wait for renderer to finish loading first on this.
             // load real symbols into our source
-            loadPromises.push(dFC.loadSymbology());
+            // loadPromises.push(dFC.loadSymbology());
 
-            // update asynchronous values
-            const pLD = dFC.getLayerData()
-                .then(ld => {
-                    dFC.layerType = serverLayerTypeToClientLayerType(ld.layerType);
-
-                    // if we didn't have an extent defined on the config, use the layer extent
-                    if (!dFC.extent) {
-                        dFC.extent = ld.extent;
-                    }
-                    dFC.extent = shared.makeSafeExtent(dFC.extent);
-
-                    dFC._scaleSet.minScale = ld.minScale;
-                    dFC._scaleSet.maxScale = ld.maxScale;
-
-                    dFC.nameField = subC.nameField || ld.nameField || '';
-
-                    // check the config for any custom field aliases, and add the alias as a property if it exists
-                    ld.fields.forEach(field => {
-                        const layerConfig = this.config.source.layerEntries.find(r => r.index == idx);
-                        if (layerConfig && layerConfig.fieldMetadata) {
-                            const clientAlias = layerConfig.fieldMetadata.find(f => f.data === field.name);
-                            field.clientAlias = clientAlias ? clientAlias.alias : undefined;
-                        }
-                    });
-
-                    // skip a number of things if it is a raster layer
-                    // either way, return a promise so our loadPromises have a good
-                    // value to wait on.
-                    if (dFC.layerType === shared.clientLayerType.ESRI_FEATURE) {
-                        dFC.geomType = ld.geometryType;
-                        dFC.oidField = ld.oidField;
-
-                        return this.getFeatureCount(idx).then(fc => {
-                            dFC.featureCount = fc;
-                        });
-                    } else {
-                        return Promise.resolve();
-                    }
-                })
-                .catch(() => {
-                    dFC.layerType = shared.clientLayerType.UNRESOLVED;
-                });
-            loadPromises.push(pLD);
+            loadPromises.push(pLMD);
 
         });
 
-        // TODO careful now, as the dynamicFC.DynamicFC constructor also appears to be setting visibility on the parent.
-        if (this._configIsComplete) {
-            // if we have a complete config, want to set layer visibility
-            // get an array of leaf ids that are visible.
-            // use _featClasses as it contains keys that exist on the server and are
-            // potentially visible in the client.
-            const initVis = Object.keys(this._featClasses)
-                .filter(fcId => { return fetchSubConfig(fcId).config.state.visibility; })
-                .map(fcId => { return parseInt(fcId); });
-
-            if (initVis.length === 0) {
-                initVis.push(-1); // esri code for set all to invisible
+        // any sublayers not in our tree, we need to turn off.
+        this.typedInnerLayer().allSublayers.forEach((s: esri.Sublayer) => {
+            // find sublayers that are not groups, and dont exist in our initilazation array
+            if (!s.sublayers && !leafsToInit.find((fc: MapImageFC) => fc.layerIdx === s.id)) {
+                s.visible = false;
             }
-            this._layer.setVisibleLayers(initVis);
-        } else {
-            // default configuration for non-complete config.
-            this._layer.setVisibility(false);
-            this._layer.setVisibleLayers([-1]);
-        }
+        });
 
         // get mapName of the legend entry from the service to use as the name if not provided in config
         if (!this.name) {
-            const defService = this._esriRequest({
-                url: this._layer.url + '?f=json',
-                callbackParamName: 'callback',
-                handleAs: 'json',
+            const defService = this.esriBundle.esriRequest(this.typedInnerLayer().url, {
+                query: {
+                    f: 'json'
+                }
             });
-            const setTitle = defService.then(serviceResult => {
-                this.name = serviceResult.mapName;
+            const setTitle = defService.then((serviceResult: esri.RequestResponse) => {
+                if (serviceResult.data) {
+                    this.name = serviceResult.data.mapName || '';
+                    this.layerTree.name = this.name;
+                }
             });
             loadPromises.push(setTitle);
         }
-
-        */
 
         // TODO add back in promises
         // loadPromises.push(pLD, pFC, pLS);
 
         return loadPromises;
+    }
+
+    // ----------- LAYER MANAGEMENT -----------
+    // Map Image Layer is an oddball, because the parent has state that is different from the state of the children.
+    // so for properties that fall into this category, we intercept the common routies, and treat an undefined
+    // layerIdx as targeting the layer proper (in other layers, undefined means take the default child)
+
+    getName (layerIdx: number = undefined): string {
+        if (this.isUn(layerIdx)) {
+            return this.name;
+        } else {
+            return super.getName(layerIdx);
+        }
+    }
+
+    /**
+     * Returns the visibility of the layer/sublayer.
+     *
+     * @function getVisibility
+     * @param {Integer} [layerIdx] targets a layer index to get visibility for. Uses first/only if omitted.
+     * @returns {Boolean} visibility of the layer/sublayer
+     */
+    getVisibility (layerIdx: number = undefined): boolean {
+        if (this.isUn(layerIdx)) {
+            return this.innerLayer.visible;
+        } else {
+            return super.getVisibility(layerIdx);
+        }
+    }
+
+    /**
+     * Applies visibility to feature class.
+     *
+     * @function setVisibility
+     * @param {Boolean} value the new visibility setting
+     * @param {Integer} [layerIdx] targets a layer index to get visibility for. Uses first/only if omitted.
+     */
+    setVisibility (value: boolean, layerIdx: number = undefined): void {
+        if (this.isUn(layerIdx)) {
+            this.innerLayer.visible = value;
+        } else {
+            super.setVisibility(value, layerIdx);
+        }
+    }
+
+    private needChildErrorCheck(layerIdx: number, methodName: string): void {
+        if (this.isUn(layerIdx)) {
+            throw new Error(`Attempted to call ${methodName} on Map Image Layer with no layerIdx specified. This method does not apply to the root layer`);
+        }
+    }
+
+    getAttributes (layerIdx: number = undefined): Promise<AttributeSet> {
+        this.needChildErrorCheck(layerIdx, 'getAttributes');
+        return super.getAttributes(layerIdx);
+    }
+
+    abortAttributeLoad (layerIdx: number = undefined): void {
+        this.needChildErrorCheck(layerIdx, 'abortAttributeLoad');
+        return super.abortAttributeLoad(layerIdx);
+    }
+
+    destroyAttributes (layerIdx: number = undefined): void {
+        this.needChildErrorCheck(layerIdx, 'destroyAttributes');
+        return super.destroyAttributes(layerIdx);
+    }
+
+    // formerly known as getFormattedAttributes
+    getTabularAttributes (layerIdx: number = undefined): Promise<AttributeSet> {
+        this.needChildErrorCheck(layerIdx, 'getTabularAttributes');
+        return super.getTabularAttributes(layerIdx);
+    }
+
+    getFeatureCount (layerIdx: number = undefined): number {
+        this.needChildErrorCheck(layerIdx, 'getFeatureCount');
+        return super.getFeatureCount(layerIdx);
     }
 
 }
