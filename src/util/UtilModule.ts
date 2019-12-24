@@ -11,6 +11,7 @@ import SharedUtils from './SharedUtils';
 import QueryService from './QueryService';
 import HighlightService from './HighlightService';
 import ProjectionService from './ProjectionService';
+import SymbologyService from './SymbologyService';
 
 export default class UtilModule extends BaseBase {
 
@@ -19,6 +20,7 @@ export default class UtilModule extends BaseBase {
     query: QueryService;
     highlight: HighlightService;
     proj: ProjectionService;
+    symbology: SymbologyService
 
     constructor (infoBundle: InfoBundle, epsgFunction: EpsgLookup = undefined) {
         super(infoBundle);
@@ -27,6 +29,7 @@ export default class UtilModule extends BaseBase {
         this.query = new QueryService(infoBundle);
         this.highlight = new HighlightService(infoBundle);
         this.proj = new ProjectionService(infoBundle, epsgFunction);
+        this.symbology = new SymbologyService(infoBundle);
     }
 
 }
