@@ -397,7 +397,7 @@ export default class SymbologyService extends BaseBase {
      * @param {Array} list a list of config-supplied symbology items in the form of [ { text: <String>, image: <String> }, ... ] wher `image` can be dataURL or an actual url
      * @return {Array} an array of converted symbology symbols in the form of [ { name: <String>, image: <String>, svgcode: <String> }, ... ]; items will be populated async as conversions are done
      */
-    _listToSymbology(conversionFunction: Function, list: Array<any>): Array<Object> {
+    private listToSymbology(conversionFunction: Function, list: Array<any>): Array<Object> {
         const results = list.map(({ text, image }) => {
             const result = {
                 name: text,
@@ -413,6 +413,16 @@ export default class SymbologyService extends BaseBase {
         });
 
         return results;
+    }
+
+    // these two functions called by legend ui to make symbol stacks.
+    // may need to adjust stuff with new UI
+    listToIconSymbology(list: Array<any>): Array<any> {
+        return this.listToSymbology(this.renderSymbologyIcon, list);
+    }
+
+    listToImageSymbology(list: Array<any>): Array<any> {
+        return this.listToSymbology(this.renderSymbologyImage, list);
     }
 
     /**
