@@ -937,69 +937,68 @@ export default class SymbologyService extends BaseBase {
             });
     }
 
-    buildRendererToLegend(window: Window): Object {
-        /**
-         * Generate a legend object based on an ESRI renderer.
-         * @private
-         * @param  {Object} renderer an ESRI renderer object in server JSON form
-         * @param  {Integer} index the layer index of this renderer
-         * @param  {Array} fields Optional. Array of field definitions for the layer the renderer belongs to. If missing, all fields are assumed as String
-         * @return {Object} an object matching the form of an ESRI REST API legend
-         */
-        return (renderer: any, index: number, fields: Array<any>) => {
-            // SVG Legend symbology uses pixels instead of points from ArcGIS Server, thus we need
-            // to multply it by a factor to correct the values.  96 DPI from ArcGIS Server is assumed.
-            const ptFactor = 1.33333; // points to pixel factor
+    /**
+     * Generate a legend object based on an ESRI renderer.
+     * @private
+     * @param  {Object} renderer an ESRI renderer object in server JSON form
+     * @param  {Integer} index the layer index of this renderer
+     * @param  {Array} fields Optional. Array of field definitions for the layer the renderer belongs to. If missing, all fields are assumed as String
+     * @return {Object} an object matching the form of an ESRI REST API legend
+     */
+    rendererToLegend(renderer: any, index: number, fields: Array<any> = undefined): Object {
 
-            // make basic shell object with .layers array
-            const legend = {
-                layers: [{
-                    layerId: index,
-                    legend: []
-                }]
-            };
+        // SVG Legend symbology uses pixels instead of points from ArcGIS Server, thus we need
+        // to multply it by a factor to correct the values.  96 DPI from ArcGIS Server is assumed.
+        const ptFactor = 1.33333; // points to pixel factor
 
-            // calculate symbology filter logic
-            this.filterifyRenderer(renderer, fields);
-
-            switch (renderer.type) {
-                case this.SIMPLE:
-                    renderer.symbol.size = Math.round(renderer.symbol.size * ptFactor);
-                    legend.layers[0].legend.push(this.symbolToLegend(renderer.symbol,
-                        renderer.label, renderer.definitionClause, window));
-                    break;
-
-                case this.UNIQUE_VALUE:
-                    if (renderer.defaultSymbol) {
-                        renderer.defaultSymbol.size = Math.round(renderer.defaultSymbol.size * ptFactor);
-                    }
-                    renderer.uniqueValueInfos.forEach(val => {
-                        val.symbol.size = Math.round(val.symbol.size * ptFactor);
-                    });
-                    legend.layers[0].legend = this.scrapeListRenderer(renderer, renderer.uniqueValueInfos, window);
-                    break;
-
-                case this.CLASS_BREAKS:
-                    if (renderer.defaultSymbol) {
-                        renderer.defaultSymbol.size = Math.round(renderer.defaultSymbol.size * ptFactor);
-                    }
-                    renderer.classBreakInfos.forEach(val => {
-                        val.symbol.size = Math.round(val.symbol.size * ptFactor);
-                    });
-                    legend.layers[0].legend = this.scrapeListRenderer(renderer, renderer.classBreakInfos, window);
-                    break;
-
-                case this.NONE:
-                    break;
-
-                default:
-
-                    // FIXME make a basic blank entry (error msg as label?) to prevent things from breaking
-                    // Renderer we dont support
-                    console.error('encountered unsupported renderer legend type: ' + renderer.type);
-            }
-            return legend;
+        // make basic shell object with .layers array
+        const legend = {
+            layers: [{
+                layerId: index,
+                legend: []
+            }]
         };
+
+        // calculate symbology filter logic
+        this.filterifyRenderer(renderer, fields);
+
+        switch (renderer.type) {
+            case this.SIMPLE:
+                renderer.symbol.size = Math.round(renderer.symbol.size * ptFactor);
+                legend.layers[0].legend.push(this.symbolToLegend(renderer.symbol,
+                    renderer.label, renderer.definitionClause, this.window));
+                break;
+
+            case this.UNIQUE_VALUE:
+                if (renderer.defaultSymbol) {
+                    renderer.defaultSymbol.size = Math.round(renderer.defaultSymbol.size * ptFactor);
+                }
+                renderer.uniqueValueInfos.forEach(val => {
+                    val.symbol.size = Math.round(val.symbol.size * ptFactor);
+                });
+                legend.layers[0].legend = this.scrapeListRenderer(renderer, renderer.uniqueValueInfos, this.window);
+                break;
+
+            case this.CLASS_BREAKS:
+                if (renderer.defaultSymbol) {
+                    renderer.defaultSymbol.size = Math.round(renderer.defaultSymbol.size * ptFactor);
+                }
+                renderer.classBreakInfos.forEach(val => {
+                    val.symbol.size = Math.round(val.symbol.size * ptFactor);
+                });
+                legend.layers[0].legend = this.scrapeListRenderer(renderer, renderer.classBreakInfos, this.window);
+                break;
+
+            case this.NONE:
+                break;
+
+            default:
+
+                // FIXME make a basic blank entry (error msg as label?) to prevent things from breaking
+                // Renderer we dont support
+                console.error('encountered unsupported renderer legend type: ' + renderer.type);
+        }
+        return legend;
     }
 
     /**
@@ -1008,14 +1007,13 @@ export default class SymbologyService extends BaseBase {
      * @function getMapServerLegend
      * @private
      * @param  {String} layerUrl service url (root service, not indexed endpoint)
-     * @param  {Object} esriBundle collection of ESRI API objects
      * @returns {Promise} resolves in an array of legend data
      *
      */
-    getMapServerLegend(layerUrl: string, esriBundle: EsriBundle): Promise<any> {
+    getMapServerLegend(layerUrl: string): Promise<any> {
 
         // standard json request with error checking
-        const defService = esriBundle.esriRequest({
+        const defService = this.esriBundle.esriRequest({
             url: `${layerUrl}/legend`,
             content: { f: 'json' },
             callbackParamName: 'callback',
@@ -1113,37 +1111,37 @@ export default class SymbologyService extends BaseBase {
         };
     }
 
-    buildMapServerToLocalLegend(esriBundle: EsriBundle, geoApi: GeoApi): Object {
-        /**
-         * Orchestrator function that will:
-         * - Fetch a legend from an esri map server
-         * - Extract legend for a specific sub layer
-         * - Convert server legend to a temporary renderer
-         * - Convert temporary renderer to a viewer-formatted legend (return value)
-         *
-         * @function mapServerToLocalLegend
-         * @param {String}    mapServerUrl  service url (root service, not indexed endpoint)
-         * @param {Integer}   [layerIndex]  the index of the layer in the legend we are interested in. If not provided, all layers will be collapsed into a single legend
-         * @returns {Promise} resolves in a viewer-compatible legend for the given server and layer index
-         *
-         */
-        return async (mapServerUrl: string, layerIndex: number | string) => {
-            // get esri legend from server
+    /**
+     * Orchestrator function that will:
+     * - Fetch a legend from an esri map server
+     * - Extract legend for a specific sub layer
+     * - Convert server legend to a temporary renderer
+     * - Convert temporary renderer to a viewer-formatted legend (return value)
+     *
+     * @function mapServerToLocalLegend
+     * @param {String}    mapServerUrl  service url (root service, not indexed endpoint)
+     * @param {Integer}   [layerIndex]  the index of the layer in the legend we are interested in. If not provided, all layers will be collapsed into a single legend
+     * @returns {Promise} resolves in a viewer-compatible legend for the given server and layer index
+     *
+     */
+    async mapServerToLocalLegend(mapServerUrl: string, layerIndex: number | string): Promise<any> {
 
-            const serverLegendData = await this.getMapServerLegend(mapServerUrl, esriBundle);
-            // derive renderer for specified layer
-            let fakeRenderer: Object;
-            let intIndex: number;
-            if (typeof layerIndex === 'undefined') {
-                intIndex = 0;
-                fakeRenderer = this.mapServerLegendToRendererAll(serverLegendData);
-            }
-            else {
-                intIndex = parseInt((<string>layerIndex)); // sometimes a stringified value comes in. careful now.
-                fakeRenderer = this.mapServerLegendToRenderer(serverLegendData, intIndex);
-            }
-            // convert renderer to viewer specific legend
-            return geoApi.symbology.rendererToLegend(fakeRenderer, intIndex);
-        };
+        // get esri legend from server
+
+        const serverLegendData = await this.getMapServerLegend(mapServerUrl);
+        // derive renderer for specified layer
+        let fakeRenderer: Object;
+        let intIndex: number;
+        if (typeof layerIndex === 'undefined') {
+            intIndex = 0;
+            fakeRenderer = this.mapServerLegendToRendererAll(serverLegendData);
+        }
+        else {
+            intIndex = parseInt((<string>layerIndex)); // sometimes a stringified value comes in. careful now.
+            fakeRenderer = this.mapServerLegendToRenderer(serverLegendData, intIndex);
+        }
+        // convert renderer to viewer specific legend
+        return this.rendererToLegend(fakeRenderer, intIndex);
+
     }
 }
