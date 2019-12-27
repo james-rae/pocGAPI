@@ -322,7 +322,7 @@ export default class SymbologyService extends BaseBase {
         }
 
         // make an empty svg graphic in case nothing is found to avoid undefined inside the filters
-        if (typeof svgcode === 'undefined') {
+        if (this.isUn(svgcode)) {
             svgcode = svgjs(window.document.createElement('div')).size(this.CONTAINER_SIZE, this.CONTAINER_SIZE).svg();
         }
 
@@ -957,8 +957,8 @@ export default class SymbologyService extends BaseBase {
      */
     rendererToLegend(renderer: any, index: number, fields: Array<any> = undefined): Object {
 
-        // SVG Legend symbology uses pixels instead of points from ArcGIS Server, thus we need
-        // to multply it by a factor to correct the values.  96 DPI from ArcGIS Server is assumed.
+        // SVG Legend symbology uses pixels instead of points from ArcGIS, thus we need
+        // to multply it by a factor to correct the values.  96 DPI from ArcGIS is assumed.
         const ptFactor = 1.33333; // points to pixel factor
 
         // make basic shell object with .layers array
@@ -1066,7 +1066,7 @@ export default class SymbologyService extends BaseBase {
         // when no layer has been found it can be a layer whitout a legend like annotation layer
         // in this case, do not apply a renderer
         let renderer: Object;
-        if (typeof layerLegend !== 'undefined') {
+        if (this.isUn(layerLegend)) {
             // make the mock renderer
             renderer = {
                 type: 'uniqueValue',
@@ -1142,7 +1142,7 @@ export default class SymbologyService extends BaseBase {
         // derive renderer for specified layer
         let fakeRenderer: Object;
         let intIndex: number;
-        if (typeof layerIndex === 'undefined') {
+        if (this.isUn(layerIndex)) {
             intIndex = 0;
             fakeRenderer = this.mapServerLegendToRendererAll(serverLegendData);
         }

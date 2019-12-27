@@ -1,6 +1,6 @@
 import esri = __esri;
 
-import { EsriBundle, InfoBundle, ArcGisServerUrl } from '../gapiTypes';
+import { InfoBundle, ArcGisServerUrl } from '../gapiTypes';
 import BaseBase from '../BaseBase';
 
 export default class SharedUtils extends BaseBase {
@@ -9,29 +9,28 @@ export default class SharedUtils extends BaseBase {
         super(infoBundle);
     }
 
-    // TODO remove builder, use this.esriBundle
     // TODO figure out grand scheme of layer type strings. use enum? adopt server strings?
-    getLayerTypeBuilder(esriBundle: EsriBundle): Object {
-        /**
-         * Will return a string indicating the type of layer a layer object is.
-         * @method getLayerType
-         * @param  {Object} layer an ESRI API layer object
-         * @return {String} layer type
-         */
-        return (layer: esri.Layer): string => {
-            if (layer instanceof esriBundle.FeatureLayer) {
-                return 'FeatureLayer';
-            } else if (layer instanceof esriBundle.WMSLayer) {
-                return 'WmsLayer';
-            } else if (layer instanceof esriBundle.MapImageLayer) {
-                return 'MapImageLayer';
-            } else if (layer instanceof esriBundle.TileLayer) {
-                return 'TileLayer';
-            } else {
-                // Can add more types above as we support them
-                return 'UNKNOWN';
-            }
-        };
+    /**
+     * Will return a string indicating the type of layer a layer object is.
+     * @method getLayerType
+     * @param  {Object} layer an ESRI API layer object
+     * @return {String} layer type
+     */
+    getLayerType(layer: esri.Layer): string {
+
+        if (layer instanceof this.esriBundle.FeatureLayer) {
+            return 'FeatureLayer';
+        } else if (layer instanceof this.esriBundle.WMSLayer) {
+            return 'WmsLayer';
+        } else if (layer instanceof this.esriBundle.MapImageLayer) {
+            return 'MapImageLayer';
+        } else if (layer instanceof this.esriBundle.TileLayer) {
+            return 'TileLayer';
+        } else {
+            // Can add more types above as we support them
+            return 'UNKNOWN';
+        }
+
     }
 
     /**
