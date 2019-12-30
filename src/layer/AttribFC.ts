@@ -6,6 +6,7 @@ import { InfoBundle, AttributeSet } from '../gapiTypes';
 import BaseLayer from './BaseLayer';
 import BaseFC from './BaseFC';
 import { AttributeLoaderBase, AttributeLoaderDetails, ArcServerAttributeLoader } from '../util/AttributeLoader';
+import { BaseRenderer } from '../util/Renderers';
 
 export default class AttribFC extends BaseFC {
 
@@ -15,10 +16,10 @@ export default class AttribFC extends BaseFC {
     fields: Array<esri.Field>;
     nameField: string;
     extent: esri.Extent;
-    renderer: esri.Renderer; // TODO careful. this is js api class, we might be dealing with server class.  also since we enhance, we might need to extend the interface
     legend: any; // TODO figure out what this is. i think it's our custom class. make a definition somewhere
     attLoader: AttributeLoaderBase;
     featureCount: number; // TODO figure out how to identify an unknown count. will use undefined for now. -1 would be other option
+    renderer: BaseRenderer;
 
     constructor (infoBundle: InfoBundle, parent: BaseLayer, layerIdx: number = 0) {
         super(infoBundle, parent, layerIdx);
@@ -31,7 +32,7 @@ export default class AttribFC extends BaseFC {
     // NOTE this logic is for ArcGIS Server sourced things.
     //      other sourced attribute layers should override this function.
     // TODO consider moving a bulk of this out to LayerModule; the wizard may have use for running this (e.g. getting field list for a service url)
-    loadLayerMetadata(serviceUrl: string): Promise<void> {
+    loadLayerMetadata(serviceUrl: string, options: any = {}): Promise<void> {
 
         if (!serviceUrl) {
             // case where a non-server subclass ends up calling this via .super magic.
@@ -92,14 +93,15 @@ export default class AttribFC extends BaseFC {
 
                         // TODO add in renderer and legend magic
                         // add renderer and legend
-                        /*
-                        const renderer = customRenderer.type ? customRenderer : serviceResult.drawingInfo.renderer;
-                        layerData.renderer = geoApi.symbology.cleanRenderer(renderer, serviceResult.fields);
+                        const sourceRenderer = (options && options.customRenderer && options.customRenderer.type) ?
+                            options.customRenderer : sData.drawingInfo.renderer;
+                        this.renderer = this.gapi.utils.symbology.makeRenderer(esri.Renderer.fromJSON(sourceRenderer), this.fields);
 
-                        layerData.legend = geoApi.symbology.rendererToLegend(layerData.renderer, featureIdx,
-                            serviceResult.fields);
-                        geoApi.symbology.enhanceRenderer(layerData.renderer, layerData.legend);
-                        */
+                        // this array will have a set of promises that resolve when all the legend svg has drawn.
+                        // for now, will not include that set (promise.all'd) on the layer load blocker;
+                        // don't want to stop a layer from loading just because an icon won't draw.
+                        // ideally we'll have placeholder symbol (white square, loading symbol, caution symbol, etc)
+                        this.legend = this.gapi.utils.symbology.rendererToLegend(this.renderer);
 
                         // temporarily store things for delayed attributes
                         const loadData: AttributeLoaderDetails = {

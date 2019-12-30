@@ -298,6 +298,8 @@ export default class MapImageLayer extends AttribLayer {
 
             // NOTE: can consider alternates, like innerLayer.url + / + layerIdx
             const serviceUrl: string = findSublayer(mlFC.layerIdx).url;
+
+            // TODO check if we have custom renderer, add to options parameter here
             const pLMD: Promise<void> = mlFC.loadLayerMetadata(serviceUrl).then(() => {
                 // apply any updates that were in the configuration snippets
                 const subC: RampLayerMapImageLayerEntryConfig = subConfigs[mlFC.layerIdx];

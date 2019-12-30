@@ -90,9 +90,6 @@ export interface GeoApi {
     shared?: any;
     // query?: any;
     // events?: any;
-    highlight?: any;
-    symbology?: any;
-
     // TODO add module names as we import them
 
     fakeNewsMaps?: any; // TODO remove after real maps are implemented
@@ -117,6 +114,14 @@ export enum LayerState { // these are used as css classes; hence the `rv` prefix
 export interface AttributeSet {
     features: Array<any>;
     oidIndex?: {[key: string]: number}; // TODO check if we're relly using the index enough to make it worth keeping
+}
+
+export interface LegendSymbology {
+    label: string;
+    definitionClause: string;
+    svgcode: string;
+    drawPromise: Promise<void>;
+    // TODO might need to add something to support image-based legends we find in WMS or custom stacks from the config
 }
 
 export interface ArcGisServerUrl {

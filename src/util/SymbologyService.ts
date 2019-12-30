@@ -1,7 +1,9 @@
-import { InfoBundle, EsriBundle, GeoApi } from '../gapiTypes';
+import esri = __esri;
+import { InfoBundle, LegendSymbology } from '../gapiTypes';
 import BaseBase from '../BaseBase';
 
 import svgjs from 'svg.js';
+import { BaseRenderer, BaseSymbolUnit, SimpleRenderer, ClassBreaksRenderer, UniqueValueRenderer } from './Renderers';
 
 // Functions for turning ESRI Renderers into images
 // Specifically, converting ESRI "Simple" symbols into images,
@@ -356,6 +358,26 @@ export default class SymbologyService extends BaseBase {
         return renderInfo.symbol;
     }
 
+    makeRenderer(esriRenderer: esri.Renderer, fields: Array<esri.Field>, falseRenderer: boolean = false): BaseRenderer {
+        switch (esriRenderer.type) {
+            case 'simple':
+                return new SimpleRenderer(<esri.SimpleRenderer>esriRenderer, fields);
+
+            case 'class-breaks':
+                return new ClassBreaksRenderer(<esri.ClassBreaksRenderer>esriRenderer, fields);
+
+            case 'unique-value':
+                return new UniqueValueRenderer(<esri.UniqueValueRenderer>esriRenderer, fields, falseRenderer);
+
+            default:
+                // TODO find a way to make a fake renderer (i.e. a simple renderer with just a white square)
+                //      and return it. that way it won't crash the app.  once done, change back to console error instead of real error
+
+                // console.error(`Unknown renderer type encountered - ${esriRenderer.type}`);
+                throw new Error(`Unknown renderer type encountered - ${esriRenderer.type}`);
+        }
+    }
+
     /**
      * Generates svg symbology for WMS layers.
      * @function generateWMSSymbology
@@ -523,19 +545,24 @@ export default class SymbologyService extends BaseBase {
     }
 
     /**
-     * Generate a legend item for an ESRI symbol.
+     * Generate an SVG string for an ESRI symbol.
      * @private
-     * @param  {Object} symbol an ESRI symbol object in server format
-     * @param  {String} label label of the legend item
-     * @param  {String} definitionClause sql clause to filter on this legend item
-     * @param  {Object} window reference to the browser window
-     * @return {Object} a legend object populated with the symbol and label
+     * @param  {Object} realSymbol an ESRI symbol object in server format
+     * @return {Promise} resolves to an SVG string representing the symbol
      */
-    async symbolToLegend(symbol: any, label: string, definitionClause: string, window: Window): Promise<any> {
+    private async symbolToSvg(realSymbol: any): Promise<string> {
+        // TODO now that we are enlightened and using typescript and classes and such, consider taking this monster
+        //      function with all it's nested functions and moving them to some type of SVG service / class.
+
+        // SVG Legend symbology uses pixels instead of points (which is waht ESRI uses), thus we need
+        // to multply it by a factor to correct the values.  96 DPI is assumed. Copy the symbol to avoid messing up other things
+        const symbol: any = JSON.parse(JSON.stringify(realSymbol));
+        symbol.size = symbol.size * 1.33333; // points to pixels factor
+
         // create a temporary svg element and add it to the page; if not added, the element's bounding box cannot be calculated correctly
-        const container = window.document.createElement('div');
+        const container = this.window.document.createElement('div');
         container.setAttribute('style', 'opacity:0;position:fixed;left:100%;top:100%;overflow:hidden');
-        window.document.body.appendChild(container);
+        this.window.document.body.appendChild(container);
 
         const draw = svgjs(container)
             .size(this.CONTAINER_SIZE, this.CONTAINER_SIZE)
@@ -666,6 +693,8 @@ export default class SymbologyService extends BaseBase {
             }
         };
 
+        // TODO this is using server symbol definitions. we might need to adjust to use ESRI JS API defs.
+        //      e.g. esriSMS() would become [simple-marker]()
         // jscs doesn't like enhanced object notation
         // jscs:disable requireSpacesInAnonymousFunctionExpression
         const symbolTypes = {
@@ -803,10 +832,11 @@ export default class SymbologyService extends BaseBase {
             // console.log(symbol.type, label, '--DONE--');
             // remove element from the page
             window.document.body.removeChild(container);
-            return { label, definitionClause, svgcode: draw.svg() };
+            return draw.svg();
         }
         catch (error) {
-            return console.log(error);
+            console.log(error);
+            return '' // TODO hardcode a warning icon? a blank white square?
         }
 
         /**
@@ -883,132 +913,59 @@ export default class SymbologyService extends BaseBase {
     }
 
     /**
-     * Generate an array of legend items for an ESRI unique value or class breaks renderer.
-     * @private
-     * @param  {Object} renderer an ESRI unique value or class breaks renderer
-     * @param  {Array} childList array of children items of the renderer
-     * @param  {Object} window reference to the browser window
-     * @return {Array} a legend object populated with the symbol and label
-     */
-    scrapeListRenderer(renderer: any, childList: Array<any>, window: Window): Array<any> {
-
-        // a renderer list can have multiple entries for the same label
-        // (e.g. mapping two unique values to the same legend category).
-        // here we assume an identical labels equate to a single legend
-        // entry.
-
-        const preLegend = childList.map(child => {
-            return { symbol: child.symbol, label: child.label,
-                definitionClause: child.definitionClause };
-        });
-
-        if (renderer.defaultSymbol) {
-            // calculate fancy sql clause to select "everything else"
-            const elseClauseGuts = preLegend
-                .map(pl => pl.definitionClause)
-                .join(' OR ');
-
-            const elseClause = `(NOT (${elseClauseGuts}))`;
-
-            // class breaks dont have default label
-            // TODO perhaps put in a default of "Other", would need to be in proper language
-            preLegend.push({
-                symbol: renderer.defaultSymbol,
-                definitionClause: elseClause,
-                label: renderer.defaultLabel || ''
-            });
-        }
-
-        // filter out duplicate lables, then convert remaining things to legend items
-        return preLegend
-            .filter((item, index, inputArray) => {
-                const firstFindIdx = inputArray.findIndex(dupItem => {
-                    return item.label === dupItem.label;
-                });
-
-                if (index === firstFindIdx) {
-                    // first time encountering the label. done thanks
-                    return true;
-                } else {
-                    // not first time encountering the label.
-                    // drop from legend, but tack definition clause onto first one
-                    const firstItem = inputArray[firstFindIdx];
-                    (<any>firstItem).isCompound = true;
-                    firstItem.definitionClause += ` OR ${item.definitionClause}`;
-                    return false;
-                }
-
-            })
-            .map(item => {
-                if ((<any>item).isCompound) {
-                    item.definitionClause = `(${item.definitionClause})`; // wrap compound expression in brackets
-                }
-                return this.symbolToLegend(item.symbol, item.label, item.definitionClause, window);
-            });
-    }
-
-    /**
      * Generate a legend object based on an ESRI renderer.
      * @private
      * @param  {Object} renderer an ESRI renderer object in server JSON form
-     * @param  {Integer} index the layer index of this renderer
-     * @param  {Array} fields Optional. Array of field definitions for the layer the renderer belongs to. If missing, all fields are assumed as String
-     * @return {Object} an object matching the form of an ESRI REST API legend
+     * @return {Array} list of legend symbologies
      */
-    rendererToLegend(renderer: any, index: number, fields: Array<any> = undefined): Object {
+    rendererToLegend(renderer: BaseRenderer): Array<LegendSymbology> {
 
-        // SVG Legend symbology uses pixels instead of points from ArcGIS, thus we need
-        // to multply it by a factor to correct the values.  96 DPI from ArcGIS is assumed.
-        const ptFactor = 1.33333; // points to pixel factor
+        const legendCollater: {[key: string]: Array<BaseSymbolUnit>} = {};
 
-        // make basic shell object with .layers array
-        const legend = {
-            layers: [{
-                layerId: index,
-                legend: []
-            }]
-        };
-
-        // calculate symbology filter logic
-        this.filterifyRenderer(renderer, fields);
-
-        switch (renderer.type) {
-            case this.SIMPLE:
-                renderer.symbol.size = Math.round(renderer.symbol.size * ptFactor);
-                legend.layers[0].legend.push(this.symbolToLegend(renderer.symbol,
-                    renderer.label, renderer.definitionClause, this.window));
-                break;
-
-            case this.UNIQUE_VALUE:
-                if (renderer.defaultSymbol) {
-                    renderer.defaultSymbol.size = Math.round(renderer.defaultSymbol.size * ptFactor);
-                }
-                renderer.uniqueValueInfos.forEach(val => {
-                    val.symbol.size = Math.round(val.symbol.size * ptFactor);
-                });
-                legend.layers[0].legend = this.scrapeListRenderer(renderer, renderer.uniqueValueInfos, this.window);
-                break;
-
-            case this.CLASS_BREAKS:
-                if (renderer.defaultSymbol) {
-                    renderer.defaultSymbol.size = Math.round(renderer.defaultSymbol.size * ptFactor);
-                }
-                renderer.classBreakInfos.forEach(val => {
-                    val.symbol.size = Math.round(val.symbol.size * ptFactor);
-                });
-                legend.layers[0].legend = this.scrapeListRenderer(renderer, renderer.classBreakInfos, this.window);
-                break;
-
-            case this.NONE:
-                break;
-
-            default:
-
-                // FIXME make a basic blank entry (error msg as label?) to prevent things from breaking
-                // Renderer we dont support
-                console.error('encountered unsupported renderer legend type: ' + renderer.type);
+        // put all symbol units from the renderer in one nice array
+        const allRendererSUs: Array<BaseSymbolUnit> = renderer.symbolUnits.slice(0); // make a copy
+        if (renderer.defaultUnit) {
+            allRendererSUs.push(renderer.defaultUnit);
         }
-        return legend;
+
+        // collate the symbol units by the label. this collapses complex definitions into a nice looking legend.
+        // e.g. a renderer has SU for 'type=X' and 'type=Y', both with label 'Fun Stuff'. This merges the logic into
+        // one line on the legend for Fun Stuff!
+        allRendererSUs.forEach(su => {
+            if (legendCollater[su.label]) {
+                // not the first time we hit this label. add to the list
+                legendCollater[su.label].push(su);
+            } else {
+                legendCollater[su.label] = [su];
+            }
+        });
+
+        // TODO this code will return the legend array in the order that object.keys presents the keys.
+        //      we may need to add some additional logic to enforce a different order.
+        //      e.g. alphabetical by label, with default being last.
+        //           alphabetical by label, default not treated special.
+        //           same order as renderer's array, with default being last.
+
+        // iterate through the unique keys in the collater. process each legend item
+        return Object.keys(legendCollater).map((lbl: string) => {
+            const suSet = legendCollater[lbl];
+            const legendSym: LegendSymbology = {
+                label: lbl || '',
+                definitionClause: suSet.length === 1 ? suSet[0].definitionClause : `(${suSet.join(' OR ')})`,
+                svgcode: '', // TODO is '' ok? maybe we need white square svg? or some loading icon?
+                drawPromise: this.symbolToSvg(suSet[0].symbol).then(svg => {
+                    // update the legend symbol object
+                    legendSym.svgcode = svg;
+
+                    // update the renderer symbol units
+                    suSet.forEach(su => {
+                        su.svgCode = svg;
+                    });
+                })
+            }
+            return legendSym;
+        });
+
     }
 
     /**
@@ -1031,6 +988,7 @@ export default class SymbologyService extends BaseBase {
         });
 
         // wrap in promise to contain dojo deferred
+        // TODO this probably needs to be updated with the new return value structure of esriRequest
         return new Promise((resolve, reject) => {
             defService.then((srvResult: any) => {
 
@@ -1058,7 +1016,7 @@ export default class SymbologyService extends BaseBase {
      * @returns {Object} a fake unique value renderer based off the legend
      *
      */
-    mapServerLegendToRenderer(serverLegend: any, layerIndex: number): Object {
+    mapServerLegendToRenderer(serverLegend: any, layerIndex: number): BaseRenderer {
         const layerLegend = serverLegend.layers.find((l: any) => {
             return l.layerId === layerIndex;
         });
@@ -1066,14 +1024,16 @@ export default class SymbologyService extends BaseBase {
         // when no layer has been found it can be a layer whitout a legend like annotation layer
         // in this case, do not apply a renderer
         let renderer: Object;
-        if (this.isUn(layerLegend)) {
+        if (!this.isUn(layerLegend)) {
             // make the mock renderer
+
             renderer = {
                 type: 'uniqueValue',
-                bypassDefinitionClause: true,
+                field: 'fakefield',
                 uniqueValueInfos: layerLegend.legend.map((ll: any) => {
                     return {
                         label: ll.label,
+                        value: ll.label,
                         symbol: {
                             type: 'esriPMS',
                             imageData: ll.imageData,
@@ -1082,11 +1042,15 @@ export default class SymbologyService extends BaseBase {
                     };
                 })
             };
+
+            // ok to pass empty array. this renderer will only be used to
+            return this.makeRenderer(esri.Renderer.fromJSON(renderer), [], true);
+
         } else {
-            renderer = { type: this.NONE };
+            // TODO does this case ever exist? need to figure out a way to encode this in our official renderer objects
+            // renderer = { type: this.NONE };
+            throw new Error('attempted to make renderer from non-existing legend data'); // so basically if this error hits, we need to write some new code
         }
-        // make the mock renderer
-        return renderer;
     }
 
     /**
@@ -1101,11 +1065,18 @@ export default class SymbologyService extends BaseBase {
      * @param {Object} serverLegend legend json from an esri map server
      * @returns {Object} a fake unique value renderer based off the legend
      */
-    mapServerLegendToRendererAll(serverLegend: any): Object {
+    mapServerLegendToRendererAll(serverLegend: any): BaseRenderer {
+
+        // TODO potential problem. if we have multiple layers with same label but different
+        //      symbols, they will get combined in the legend making process.
+        //      the esri Renderer.fromJSON might also get snarky at having two identical values
+        //      in the renderer. for the snark, we can append the layer id or something
+        //      (the value is never used as we set the falseRenderer flag)
 
         const layerRenders = serverLegend.layers.map((layer: any) =>
             layer.legend.map((layerLegend: any) => ({
                 label: layerLegend.label,
+                value: layerLegend.label,
                 symbol: {
                     type: 'esriPMS',
                     imageData: layerLegend.imageData,
@@ -1114,11 +1085,13 @@ export default class SymbologyService extends BaseBase {
             }))
         );
 
-        return {
+        const fullRenderer = {
             type: 'uniqueValue',
-            bypassDefinitionClause: true,
+            field: 'fakefield',
             uniqueValueInfos: [].concat(...layerRenders)
         };
+
+        return this.makeRenderer(esri.Renderer.fromJSON(fullRenderer), [], true);
     }
 
     /**
@@ -1140,7 +1113,7 @@ export default class SymbologyService extends BaseBase {
 
         const serverLegendData = await this.getMapServerLegend(mapServerUrl);
         // derive renderer for specified layer
-        let fakeRenderer: Object;
+        let fakeRenderer: BaseRenderer;
         let intIndex: number;
         if (this.isUn(layerIndex)) {
             intIndex = 0;
@@ -1151,7 +1124,7 @@ export default class SymbologyService extends BaseBase {
             fakeRenderer = this.mapServerLegendToRenderer(serverLegendData, intIndex);
         }
         // convert renderer to viewer specific legend
-        return this.rendererToLegend(fakeRenderer, intIndex);
+        return this.rendererToLegend(fakeRenderer);
 
     }
 }

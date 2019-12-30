@@ -158,6 +158,7 @@ export default class GeoJsonLayer extends AttribLayer {
         // update asynch data
         // TODO do all this lol
         // NOTE: call extract, not load, as there is no service involved here
+        // TODO figure out what do to with custom renderer here
         gjFC.extractLayerMetadata();
         if (this.origRampConfig.tooltipField) {
             gjFC.tooltipField = fieldValidator(gjFC.fields, this.origRampConfig.tooltipField);

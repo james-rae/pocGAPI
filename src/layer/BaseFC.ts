@@ -2,7 +2,7 @@
 // TODO add proper comments
 
 import esri = __esri;
-import { InfoBundle } from '../gapiTypes';
+import { InfoBundle, LegendSymbology } from '../gapiTypes';
 import BaseBase from '../BaseBase';
 import BaseLayer from './BaseLayer';
 import ScaleSet from './ScaleSet';
@@ -14,6 +14,8 @@ export default class BaseFC extends BaseBase {
     name: string;
     scaleSet: ScaleSet;
     supportsFeatures: boolean;
+    legend: Array<LegendSymbology>; // TODO old ramp stored this in same structure as arcgis server i.e. legend.layer[idx].legend[]
+    //                                      not really seeing a reason to keep the outer structure. if we find we need it, can change back or to something better
 
     constructor (infoBundle: InfoBundle, parent: BaseLayer, layerIdx: number = 0) {
 
@@ -24,6 +26,7 @@ export default class BaseFC extends BaseBase {
         this.name = '';
         this.scaleSet = new ScaleSet();
         this.supportsFeatures = false; // default state. featurish layers should set to true when the load
+        this.legend = [];
     }
 
     /**

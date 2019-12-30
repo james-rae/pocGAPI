@@ -17,10 +17,14 @@ export class BaseRenderer {
     symbolUnits: Array<BaseSymbolUnit>;
     defaultUnit: BaseSymbolUnit;
     type: RendererType;
+    protected falseRenderer: boolean;
 
-    constructor (esriRenderer: esri.Renderer, layerFields: Array<esri.Field>) {
+    // falseRenderer is set to true when we are creating a fake renderer to facilitate generating a legend from
+    // a non-feature service, like a tile layer or imagery layer.
+    constructor (esriRenderer: esri.Renderer, layerFields: Array<esri.Field>, falseRenderer: boolean = false) {
         this.innerRenderer = esriRenderer;
         this.symbolUnits = [];
+        this.falseRenderer = falseRenderer;
 
         // specifics for a renderer should be implemented in subclass constructor
     }
@@ -102,7 +106,10 @@ export class BaseRenderer {
                 // decided error here was too destructive. it would tank the layer,
                 // while the drawback would mainly only be failed symbols.
                 // just return fieldName and hope for luck.
-                console.warn(`could not find renderer field ${fieldName}`);
+
+                // turning off warning, as we have a valid case where a renderer is constructed to
+                // support generating a legend from a non-feature service.
+                // console.warn(`could not find renderer field ${fieldName}`);
                 return fieldName;
             }
         }
@@ -163,8 +170,8 @@ export class UniqueValueRenderer extends BaseRenderer {
     private delim: string;
     private keyFields: Array<string>;
 
-    constructor (esriRenderer: esri.UniqueValueRenderer, layerFields: Array<esri.Field>) {
-        super(esriRenderer, layerFields);
+    constructor (esriRenderer: esri.UniqueValueRenderer, layerFields: Array<esri.Field>, falseRenderer: boolean = false) {
+        super(esriRenderer, layerFields, falseRenderer);
 
         this.type = RendererType.Unique;
         this.delim = esriRenderer.fieldDelimiter || ', ';
@@ -188,14 +195,14 @@ export class UniqueValueRenderer extends BaseRenderer {
             su.label = uvi.label || '';
             su.symbol = uvi.symbol;
 
-            // TODO see if we still need to consider the old bypassDefinitionClause flag here
-
             // convert fields/values into sql clause
-            const defClauseKeyValues: Array<string> = su.matchValue.split(this.delim);
-            const defClause: string = this.keyFields
-                .map((kf: string, i: number) =>  `${kf} = ${fieldDelims[i]}${quoter(defClauseKeyValues[i])}${fieldDelims[i]}`)
-                .join(' AND ');
-            su.definitionClause = `(${defClause})`;
+            if (!this.falseRenderer) {
+                const defClauseKeyValues: Array<string> = su.matchValue.split(this.delim);
+                const defClause: string = this.keyFields
+                    .map((kf: string, i: number) =>  `${kf} = ${fieldDelims[i]}${quoter(defClauseKeyValues[i])}${fieldDelims[i]}`)
+                    .join(' AND ');
+                su.definitionClause = `(${defClause})`;
+            }
 
             this.symbolUnits.push(su);
         });
@@ -252,4 +259,8 @@ export class UniqueValueSymbolUnit extends BaseSymbolUnit {
         // param will be a value key
         return this.matchValue === searchParams;
     }
+}
+
+export class ClassBreaksRenderer extends BaseRenderer {
+    // TODO ENHANCE
 }
