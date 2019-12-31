@@ -48,6 +48,7 @@ export class EsriBundle {
     // SYMBOLS & RENDERERS
     ClassBreaksRenderer: esri.ClassBreaksRendererConstructor;
     PictureMarkerSymbol: esri.PictureMarkerSymbolConstructor;
+    rendererUtils: esri.supportJsonUtils; // bad naming on esri's part here
     SimpleFillSymbol: esri.SimpleFillSymbolConstructor;
     SimpleLineSymbol: esri.SimpleLineSymbolConstructor;
     SimpleMarkerSymbol: esri.SimpleMarkerSymbolConstructor;

@@ -94,7 +94,7 @@ export default class AttribFC extends BaseFC {
                         // add renderer and legend
                         const sourceRenderer = (options && options.customRenderer && options.customRenderer.type) ?
                             options.customRenderer : sData.drawingInfo.renderer;
-                        this.renderer = this.gapi.utils.symbology.makeRenderer(esri.Renderer.fromJSON(sourceRenderer), this.fields);
+                        this.renderer = this.gapi.utils.symbology.makeRenderer(this.esriBundle.rendererUtils.fromJSON(sourceRenderer), this.fields);
 
                         // this array will have a set of promises that resolve when all the legend svg has drawn.
                         // for now, will not include that set (promise.all'd) on the layer load blocker;

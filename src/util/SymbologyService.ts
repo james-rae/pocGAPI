@@ -1046,7 +1046,7 @@ export default class SymbologyService extends BaseBase {
             };
 
             // ok to pass empty array. this renderer will only be used to
-            return this.makeRenderer(esri.Renderer.fromJSON(renderer), [], true);
+            return this.makeRenderer(this.esriBundle.rendererUtils.fromJSON(renderer), [], true);
 
         } else {
             // TODO does this case ever exist? need to figure out a way to encode this in our official renderer objects
@@ -1093,7 +1093,7 @@ export default class SymbologyService extends BaseBase {
             uniqueValueInfos: [].concat(...layerRenders)
         };
 
-        return this.makeRenderer(esri.Renderer.fromJSON(fullRenderer), [], true);
+        return this.makeRenderer(this.esriBundle.rendererUtils.fromJSON(fullRenderer), [], true);
     }
 
     /**
