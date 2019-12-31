@@ -29,6 +29,8 @@ export default class SymbologyService extends BaseBase {
         super(infoBundle);
     }
 
+    // a lot of these functions get deleted once the renderers get finished (class breaks still outstanding)
+
     /**
      * Will add extra properties to a renderer to support filtering by symbol.
      * New property .definitionClause contains sql where fragment valid for symbol
@@ -63,7 +65,7 @@ export default class SymbologyService extends BaseBase {
         // worker function to turn single quotes in a value into two
         // single quotes to avoid conflicts with the text delimiters
         const quoter = (inStr: string) => {
-            return inStr.replace(/'/g, "''");
+            return inStr.replace(/'/g, `''`);
         };
 
         switch (renderer.type) {
@@ -836,7 +838,7 @@ export default class SymbologyService extends BaseBase {
         }
         catch (error) {
             console.log(error);
-            return '' // TODO hardcode a warning icon? a blank white square?
+            return ''; // TODO hardcode a warning icon? a blank white square?
         }
 
         /**
@@ -962,7 +964,7 @@ export default class SymbologyService extends BaseBase {
                         su.svgCode = svg;
                     });
                 })
-            }
+            };
             return legendSym;
         });
 

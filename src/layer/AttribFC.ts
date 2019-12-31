@@ -43,10 +43,9 @@ export default class AttribFC extends BaseFC {
         return new Promise ((resolve, reject) => {
 
             // extract info for this service
-            // TODO appears new esriRequest defaults to what we normally use.
             const restReq: IPromise<esri.RequestResponse> = this.esriBundle.esriRequest(serviceUrl, { query: { f: 'json' } });
 
-            // TODO revisit error handling. might need a try-catch?
+            // TODO revisit error handling. might need a try-catch? could also try then().error() to clean up
             restReq.then((serviceResult: esri.RequestResponse) => {
                 if (serviceResult.data) {
                     const sData: any = serviceResult.data;

@@ -128,8 +128,9 @@ gapiPromise.then((gapi: GeoApi) => {
 
     console.log('check mah feature count', imgLayer.getFeatureCount(6));
 
-
     console.log('merry tree', imgLayer.getLayerTree());
 
-  })
+    console.log('have a look at this legend', imgLayer.getLegend(6));
+
+  });
 });

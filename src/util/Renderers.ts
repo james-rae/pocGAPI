@@ -39,7 +39,7 @@ export class BaseRenderer {
     }
 
     protected searchRenderer(attributes: any): BaseSymbolUnit {
-        const sParams: any = this.makeSearchParams(attributes)
+        const sParams: any = this.makeSearchParams(attributes);
         const targetSU: BaseSymbolUnit = this.symbolUnits.find((su: BaseSymbolUnit) => su.match(sParams));
         if (targetSU) {
             return targetSU;
@@ -82,7 +82,7 @@ export class BaseRenderer {
         }
 
         return delim;
-    };
+    }
 
     // worker function
     // corrects for any character-case discrepancy for field names in the renderer vs on the layer
@@ -113,7 +113,7 @@ export class BaseRenderer {
                 return fieldName;
             }
         }
-    };
+    }
 
     protected makeElseClause(): string {
         const elseClauseGuts = this.symbolUnits
@@ -179,7 +179,7 @@ export class UniqueValueRenderer extends BaseRenderer {
         // worker function to turn single quotes in a value into two
         // single quotes to avoid conflicts with the text delimiters
         const quoter = (inStr: string) => {
-            return inStr.replace(/'/g, "''");
+            return inStr.replace(/'/g, `''`);
         };
 
         this.keyFields = ['field', 'field2', 'field3']
