@@ -23,7 +23,7 @@ gapiPromise.then((gapi: GeoApi) => {
 
 
   // ------ feature layer test --------
-/*
+
   const rampFeatureLayerConfig = {
     id: 'fancyTest',
     url: 'http://maps-cartes.ec.gc.ca/arcgis/rest/services/EcoGeo/EcoGeo/MapServer/6',
@@ -55,9 +55,9 @@ gapiPromise.then((gapi: GeoApi) => {
     console.log('check mah feature count', fancyLayer.getFeatureCount());
 
   });
-*/
+
   // ------ geojson layer test --------
-/*
+
   const rampHappyLayerConfig = {
     id: 'happyTest',
     state: {
@@ -89,7 +89,7 @@ gapiPromise.then((gapi: GeoApi) => {
     console.log('check mah happy feature count', happyLayer.getFeatureCount());
 
   });
-*/
+
   // ------ map image layer test --------
 
   const rampMapImageLayerConfig = {
@@ -97,7 +97,7 @@ gapiPromise.then((gapi: GeoApi) => {
     name: 'I was once called Dynamic',
     layerType: 'esriDynamic', // TODO change this keyvalue?
     // layerEntries: [{ index: 21 }, { index: 17 }, { index: 19 }],
-    layerEntries: [{ index: 3, state: {} }, { index: 6, state: {} }],
+    layerEntries: [ { index: 3, state: {} }, { index: 6, state: {} }],
     state: {
       opacity: 1,
       visibility: true

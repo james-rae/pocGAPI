@@ -549,17 +549,24 @@ export default class SymbologyService extends BaseBase {
     /**
      * Generate an SVG string for an ESRI symbol.
      * @private
-     * @param  {Object} realSymbol an ESRI symbol object in server format
+     * @param  {Object} symbol an ESRI symbol object in server format
      * @return {Promise} resolves to an SVG string representing the symbol
      */
-    private async symbolToSvg(realSymbol: any): Promise<string> {
+    private async symbolToSvg(symbol: any): Promise<string> {
         // TODO now that we are enlightened and using typescript and classes and such, consider taking this monster
         //      function with all it's nested functions and moving them to some type of SVG service / class.
 
+        const _this = this;
+
+        // NOTE about symbol.size
         // SVG Legend symbology uses pixels instead of points (which is waht ESRI uses), thus we need
-        // to multply it by a factor to correct the values.  96 DPI is assumed. Copy the symbol to avoid messing up other things
-        const symbol: any = JSON.parse(JSON.stringify(realSymbol));
-        symbol.size = symbol.size * 1.33333; // points to pixels factor
+        // to multply it by a factor to correct the values.  96 DPI is assumed.
+        // Wanted to make a copy the symbol to avoid messing up other things when changing it's size for this
+        // function.  However the API classes have some type of getter magic going on, so cloning actually
+        // returns the inside guts, breaking things.
+        // since only the SimpleMarker parser appears to care about the size, we will just
+        // apply the conversion in there for now.
+        const pts2Pxl: number = 1.33333; // points to pixels factor
 
         // create a temporary svg element and add it to the page; if not added, the element's bounding box cannot be calculated correctly
         const container = this.window.document.createElement('div');
@@ -574,26 +581,26 @@ export default class SymbologyService extends BaseBase {
         // jscs doesn't like enhanced object notation
         // jscs:disable requireSpacesInAnonymousFunctionExpression
         const esriSimpleMarkerSimbol = {
-            esriSMSPath({ size, path }) {
-                return draw.path(path).size(size);
+            path({ size, path }) { // esriSMSPath
+                return draw.path(path).size(size * pts2Pxl);
             },
-            esriSMSCircle({ size }) {
-                return draw.circle(size);
+            circle({ size }) { // esriSMSCircle
+                return draw.circle(size * pts2Pxl);
             },
-            esriSMSCross({ size }) {
-                return draw.path('M 0,10 L 20,10 M 10,0 L 10,20').size(size);
+            cross({ size }) { // esriSMSCross
+                return draw.path('M 0,10 L 20,10 M 10,0 L 10,20').size(size * pts2Pxl);
             },
-            esriSMSX({ size }) {
-                return draw.path('M 0,0 L 20,20 M 20,0 L 0,20').size(size);
+            x({ size }) { // esriSMSX
+                return draw.path('M 0,0 L 20,20 M 20,0 L 0,20').size(size * pts2Pxl);
             },
-            esriSMSTriangle({ size }) {
-                return draw.path('M 20,20 L 10,0 0,20 Z').size(size);
+            triangle({ size }) { // esriSMSTriangle
+                return draw.path('M 20,20 L 10,0 0,20 Z').size(size * pts2Pxl);
             },
-            esriSMSDiamond({ size }) {
-                return draw.path('M 20,10 L 10,0 0,10 10,20 Z').size(size);
+            diamond({ size }) { // esriSMSDiamond
+                return draw.path('M 20,10 L 10,0 0,10 10,20 Z').size(size * pts2Pxl);
             },
-            esriSMSSquare({ size }) {
-                return draw.path('M 0,0 20,0 20,20 0,20 Z').size(size);
+            square({ size }) { // esriSMSSquare
+                return draw.path('M 0,0 20,0 20,20 0,20 Z').size(size * pts2Pxl);
             }
         };
 
@@ -601,18 +608,18 @@ export default class SymbologyService extends BaseBase {
 
         // line dash styles
         const ESRI_DASH_MAPS = {
-            esriSLSSolid: 'none',
-            esriSLSDash: '5.333,4',
-            esriSLSDashDot: '5.333,4,1.333,4',
-            esriSLSLongDashDotDot: '10.666,4,1.333,4,1.333,4',
-            esriSLSDot: '1.333,4',
-            esriSLSLongDash: '10.666,4',
-            esriSLSLongDashDot: '10.666,4,1.333,4',
-            esriSLSShortDash: '5.333,1.333',
-            esriSLSShortDashDot: '5.333,1.333,1.333,1.333',
-            esriSLSShortDashDotDot: '5.333,1.333,1.333,1.333,1.333,1.333',
-            esriSLSShortDot: '1.333,1.333',
-            esriSLSNull: 'none'
+            solid: 'none', // esriSLSSolid
+            none: 'none', // esriSLSNull
+            dash: '5.333,4', // esriSLSDash
+            dot: '1.333,4', // esriSLSDot
+            'dash-dot': '5.333,4,1.333,4', // esriSLSDashDot
+            'long-dash': '10.666,4', // esriSLSLongDash
+            'long-dash-dot': '10.666,4,1.333,4', // esriSLSLongDashDot
+            'long-dash-dot-dot': '10.666,4,1.333,4,1.333,4', // esriSLSLongDashDotDot
+            'short-dot': '1.333,1.333', // esriSLSShortDot
+            'short-dash': '5.333,1.333', // esriSLSShortDash
+            'short-dash-dot': '5.333,1.333,1.333,1.333', // esriSLSShortDashDot
+            'short-dash-dot-dot': '5.333,1.333,1.333,1.333,1.333,1.333' // esriSLSShortDashDotDot
         };
 
         // default stroke style
@@ -629,33 +636,33 @@ export default class SymbologyService extends BaseBase {
         const DEFAULT_OUTLINE = {
             color: [0, 0, 0, 0],
             width: 0,
-            style: ESRI_DASH_MAPS.esriSLSNull
+            style: ESRI_DASH_MAPS.none
         };
 
         // 5x5 px patter with coloured diagonal lines
         const esriSFSFills = {
-            esriSFSSolid: (symbolColour: any) => {
+            solid: (symbolColour: any) => { // esriSFSSolid
                 return {
                     color: symbolColour.colour,
                     opacity: symbolColour.opacity
                 };
             },
-            esriSFSNull: () => 'transparent',
-            esriSFSHorizontal: (_symbolColour: Object, symbolStroke: svgjs.StrokeData) => {
+            none: () => 'transparent', // esriSFSNull
+            horizontal: (_symbolColour: Object, symbolStroke: svgjs.StrokeData) => { // esriSFSHorizontal
                 const cellSize = 5;
 
                 // patter fill: horizonal line in a 5x5 px square
                 return draw.pattern(cellSize, cellSize, add =>
                     add.line(0, cellSize / 2, cellSize, cellSize / 2)).stroke(symbolStroke);
             },
-            esriSFSVertical: (_symbolColour: Object, symbolStroke: svgjs.StrokeData) => {
+            vertical: (_symbolColour: Object, symbolStroke: svgjs.StrokeData) => { // esriSFSVertical
                 const cellSize = 5;
 
                 // patter fill: vertical line in a 5x5 px square
                 return draw.pattern(cellSize, cellSize, add =>
                     add.line(cellSize / 2, 0, cellSize / 2, cellSize)).stroke(symbolStroke);
             },
-            esriSFSForwardDiagonal: (_symbolColour: Object, symbolStroke: svgjs.StrokeData) => {
+            'forward-diagonal': (_symbolColour: Object, symbolStroke: svgjs.StrokeData) => { // esriSFSForwardDiagonal
                 const cellSize = 5;
 
                 // patter fill: forward diagonal line in a 5x5 px square; two more diagonal lines offset to cover the corners when the main line is cut off
@@ -665,7 +672,7 @@ export default class SymbologyService extends BaseBase {
                     add.line(0, 0, cellSize, cellSize).move(cellSize, 0).stroke(symbolStroke);
                 });
             },
-            esriSFSBackwardDiagonal: (_symbolColour: Object, symbolStroke: svgjs.StrokeData) => {
+            'backward-diagonal': (_symbolColour: Object, symbolStroke: svgjs.StrokeData) => { // esriSFSBackwardDiagonal
                 const cellSize = 5;
 
                 // patter fill: backward diagonal line in a 5x5 px square; two more diagonal lines offset to cover the corners when the main line is cut off
@@ -675,7 +682,7 @@ export default class SymbologyService extends BaseBase {
                     add.line(cellSize, 0, 0, cellSize).move(-cellSize / 2, -cellSize / 2).stroke(symbolStroke);
                 });
             },
-            esriSFSCross: (_symbolColour: Object, symbolStroke: svgjs.StrokeData) => {
+            cross: (_symbolColour: Object, symbolStroke: svgjs.StrokeData) => { // esriSFSCross
                 const cellSize = 5;
 
                 // patter fill: horizonal and vertical lines in a 5x5 px square
@@ -684,7 +691,7 @@ export default class SymbologyService extends BaseBase {
                     add.line(0, cellSize / 2, cellSize, cellSize / 2).stroke(symbolStroke);
                 });
             },
-            esriSFSDiagonalCross: (_symbolColour: Object, symbolStroke: svgjs.StrokeData) => {
+            'diagonal-cross': (_symbolColour: Object, symbolStroke: svgjs.StrokeData) => { // esriSFSDiagonalCross
                 const cellSize = 7;
 
                 // patter fill: crossing diagonal lines in a 7x7 px square
@@ -700,7 +707,7 @@ export default class SymbologyService extends BaseBase {
         // jscs doesn't like enhanced object notation
         // jscs:disable requireSpacesInAnonymousFunctionExpression
         const symbolTypes = {
-            esriSMS() { // ESRI Simple Marker Symbol
+            'simple-marker'() { // ESRI Simple Marker Symbol esriSMS
                 const symbolColour: any = parseEsriColour(symbol.color);
 
                 symbol.outline = symbol.outline || DEFAULT_OUTLINE;
@@ -719,12 +726,12 @@ export default class SymbologyService extends BaseBase {
                         opacity: symbolColour.opacity
                     })
                     .stroke(outlineStroke)
-                    .center(this.CONTAINER_CENTER, this.CONTAINER_CENTER)
+                    .center(_this.CONTAINER_CENTER, _this.CONTAINER_CENTER)
                     .rotate(symbol.angle || 0);
 
-                this.fitInto(marker, this.CONTENT_SIZE);
+                _this.fitInto(marker, _this.CONTENT_SIZE);
             },
-            esriSLS() { // ESRI Simple Line Symbol
+            'simple-line'() { // ESRI Simple Line Symbol esriSLS
                 const lineColour: any = parseEsriColour(symbol.color);
                 const lineStroke = makeStroke({
                     color: lineColour.colour,
@@ -734,15 +741,16 @@ export default class SymbologyService extends BaseBase {
                     dasharray: ESRI_DASH_MAPS[symbol.style]
                 });
 
-                const min = this.CONTENT_PADDING;
-                const max = this.CONTAINER_SIZE - this.CONTENT_PADDING;
+                const min = _this.CONTENT_PADDING;
+                const max = _this.CONTAINER_SIZE - _this.CONTENT_PADDING;
                 draw.line(min, min, max, max)
                     .stroke(lineStroke);
             },
+            // TODO find new equivalent for this. CLS was cartographic line style. can run test using fromJSON to see what this spits out.
             esriCLS() {  // ESRI Fancy Line Symbol
-                this.esriSLS();
+                this['simple-line']();
             },
-            esriSFS() { // ESRI Simple Fill Symbol
+            'simple-fill'() { // ESRI Simple Fill Symbol esriSFS
                 const symbolColour: any = parseEsriColour(symbol.color);
                 const symbolStroke = makeStroke({
                     color: symbolColour.colour,
@@ -760,17 +768,17 @@ export default class SymbologyService extends BaseBase {
                     dasharray: ESRI_DASH_MAPS[symbol.outline.style]
                 });
 
-                draw.rect(this.CONTENT_SIZE, this.CONTENT_SIZE)
-                    .center(this.CONTAINER_CENTER, this.CONTAINER_CENTER)
+                draw.rect(_this.CONTENT_SIZE, _this.CONTENT_SIZE)
+                    .center(_this.CONTAINER_CENTER, _this.CONTAINER_CENTER)
                     .fill(symbolFill)
                     .stroke(outlineStroke);
             },
 
-            esriTS() {
+            text() { // esriTS
                 console.error('no support for feature service legend of text symbols');
             },
 
-            esriPFS() { // ESRI Picture Fill Symbol
+            'picture-fill'() { // ESRI Picture Fill Symbol esriPFS
                 // imageUri can be just an image url is specified or a dataUri string
                 const imageUri = symbol.imageData ? `data:${symbol.contentType};base64,${symbol.imageData}` : symbol.url;
 
@@ -786,7 +794,7 @@ export default class SymbologyService extends BaseBase {
                     dasharray: ESRI_DASH_MAPS[symbol.outline.style]
                 });
 
-                const picturePromise = this.gapi.utils.shared.convertImagetoDataURL(imageUri)
+                const picturePromise = _this.gapi.utils.shared.convertImagetoDataURL(imageUri)
                     .then((imageUri: string) => {
                         // make a fill from a tiled image
                         const symbolFill = draw.pattern(imageWidth, imageHeight, add =>
@@ -794,8 +802,8 @@ export default class SymbologyService extends BaseBase {
                             // there was a 4th argument 'true' here before, but maximum 3 are accepted. may need to look into this
                             add.image(imageUri, imageWidth, imageHeight));
 
-                        draw.rect(this.CONTENT_SIZE, this.CONTENT_SIZE)
-                            .center(this.CONTAINER_CENTER, this.CONTAINER_CENTER)
+                        draw.rect(_this.CONTENT_SIZE, _this.CONTENT_SIZE)
+                            .center(_this.CONTAINER_CENTER, _this.CONTAINER_CENTER)
                             .fill(symbolFill)
                             .stroke(outlineStroke);
                     });
@@ -803,21 +811,22 @@ export default class SymbologyService extends BaseBase {
                 return picturePromise;
             },
 
-            esriPMS() { // ESRI PMS? Picture Marker Symbol
+            'picture-marker'() { // ESRI PMS? Picture Marker Symbol esriPMS
                 // imageUri can be just an image url is specified or a dataUri string
-                const imageUri = symbol.imageData ? `data:${symbol.contentType};base64,${symbol.imageData}` : symbol.url;
+                const sSrc = symbol.source;
+                const imageUri = (sSrc && sSrc.imageData ) ? `data:${sSrc.contentType};base64,${sSrc.imageData}` : symbol.url;
 
                 // need to draw the image to get its size (technically not needed if we have a url, but this is simpler)
-                const picturePromise = this.gapi.utils.shared.convertImagetoDataURL(imageUri)
+                const picturePromise = _this.gapi.utils.shared.convertImagetoDataURL(imageUri)
                     .then((imageUri: string) =>
-                        this.svgDrawImage(draw, imageUri))
+                        _this.svgDrawImage(draw, imageUri))
                     .then(({ image }) => {
                         image
-                            .center(this.CONTAINER_CENTER, this.CONTAINER_CENTER)
+                            .center(_this.CONTAINER_CENTER, _this.CONTAINER_CENTER)
                             .rotate(symbol.angle || 0);
 
                         // scale image to fit into the symbology item container
-                        this.fitInto(image, this.CONTENT_IMAGE_SIZE);
+                        _this.fitInto(image, _this.CONTENT_IMAGE_SIZE);
                     });
 
                 return picturePromise;
@@ -854,14 +863,14 @@ export default class SymbologyService extends BaseBase {
         /**
          * Convert an ESRI colour object to SVG rgb format.
          * @private
-         * @param  {Array} c ESRI Colour array
+         * @param  {Object} c ESRI Colour object
          * @return {Object} colour and opacity in SVG format
          */
-        function parseEsriColour(c: Array<number>): Object {
+        function parseEsriColour(c: esri.Color): Object {
             if (c) {
                 return {
-                    colour: `rgb(${c[0]},${c[1]},${c[2]})`,
-                    opacity: c[3] / 255
+                    colour: `rgb(${c.r},${c.g},${c.b})`,
+                    opacity: c.a / 255
                 };
             } else {
                 return {
@@ -1029,6 +1038,7 @@ export default class SymbologyService extends BaseBase {
         if (!this.isUn(layerLegend)) {
             // make the mock renderer
 
+            // this is in arcgis server format. the fromJSON() call below converts it to JS API format.
             renderer = {
                 type: 'uniqueValue',
                 field: 'fakefield',
@@ -1075,6 +1085,7 @@ export default class SymbologyService extends BaseBase {
         //      in the renderer. for the snark, we can append the layer id or something
         //      (the value is never used as we set the falseRenderer flag)
 
+        // this is in arcgis server format. the fromJSON() call below converts it to JS API format.
         const layerRenders = serverLegend.layers.map((layer: any) =>
             layer.legend.map((layerLegend: any) => ({
                 label: layerLegend.label,
