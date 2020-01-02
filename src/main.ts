@@ -26,7 +26,7 @@ gapiPromise.then((gapi: GeoApi) => {
 
   const rampFeatureLayerConfig = {
     id: 'fancyTest',
-    url: 'http://maps-cartes.ec.gc.ca/arcgis/rest/services/EcoGeo/EcoGeo/MapServer/6',
+    url: 'http://maps-cartes.ec.gc.ca/arcgis/rest/services/EcoGeo/EcoGeo/MapServer/9',
     state: {
       opacity: 0.8
     },

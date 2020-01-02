@@ -12,12 +12,11 @@ import { BaseRenderer, BaseSymbolUnit, SimpleRenderer, ClassBreaksRenderer, Uniq
 
 export default class SymbologyService extends BaseBase {
 
-    // layer symbology types
+    // layer renderer types
     protected SIMPLE = 'simple';
-    protected UNIQUE_VALUE = 'uniqueValue';
-    protected CLASS_BREAKS = 'classBreaks';
+    protected UNIQUE_VALUE = 'unique-value';
+    protected CLASS_BREAKS = 'class-breaks';
     protected NONE = 'none';
-
 
     protected CONTAINER_SIZE = 32; // size of the symbology item container
     protected CONTENT_SIZE = 24; // size of the symbology graphic
@@ -29,311 +28,6 @@ export default class SymbologyService extends BaseBase {
         super(infoBundle);
     }
 
-    // a lot of these functions get deleted once the renderers get finished (class breaks still outstanding)
-
-    /**
-     * Will add extra properties to a renderer to support filtering by symbol.
-     * New property .definitionClause contains sql where fragment valid for symbol
-     * for app on each renderer item.
-     *
-     * @param {Object} renderer an ESRI renderer object in server JSON form. Param is modified in place
-     * @param  {Array} fields Optional. Array of field definitions for the layer the renderer belongs to. If missing, all fields are assumed as String
-     */
-    filterifyRenderer(renderer: any, fields: Array<any>): void {
-
-        // worker function. determines if a field value should be wrapped in
-        // any character and returns the character. E.g. string would return ', numbers return empty string.
-        const getFieldDelimiter = (fieldName: any) => {
-
-            let delim = `'`;
-
-            // no field definition means we assume strings.
-            if (!fields || fields.length === 0) {
-                return delim;
-            }
-
-            // attempt to find our field, and a data type for it.
-            const f = fields.find(ff => ff.name === fieldName);
-            if (f && f.type && f.type !== 'esriFieldTypeString') {
-                // we found a field, with a type on it, but it's not a string. remove the delimiters
-                delim = '';
-            }
-
-            return delim;
-        };
-
-        // worker function to turn single quotes in a value into two
-        // single quotes to avoid conflicts with the text delimiters
-        const quoter = (inStr: string) => {
-            return inStr.replace(/'/g, `''`);
-        };
-
-        switch (renderer.type) {
-            case this.SIMPLE:
-                renderer.definitionClause = '1=1';
-                break;
-
-            case this.UNIQUE_VALUE:
-                if (renderer.bypassDefinitionClause) {
-                    // we are working with a renderer that we generated from a server legend.
-                    // just set dumb basic things.
-                    renderer.uniqueValueInfos.forEach((uvi: any) => {
-                        uvi.definitionClause = '1=1';
-                    });
-                } else {
-                    const delim = renderer.fieldDelimiter || ', ';
-                    const keyFields = ['field1', 'field2', 'field3']
-                        .map(fn => renderer[fn]) // extract field names
-                        .filter(fn => fn);       // remove any undefined names
-
-                    const fieldDelims = keyFields.map(fn => getFieldDelimiter(fn));
-
-                    renderer.uniqueValueInfos.forEach((uvi: any) => {
-                        // unpack .value into array
-                        const keyValues = uvi.value.split(delim);
-
-                        // convert fields/values into sql clause
-                        const clause = keyFields
-                            .map((kf, i) =>  `${kf} = ${fieldDelims[i]}${quoter(keyValues[i])}${fieldDelims[i]}`)
-                            .join(' AND ');
-
-                        uvi.definitionClause = `(${clause})`;
-                    });
-                }
-
-                break;
-            case this.CLASS_BREAKS:
-
-                const f = renderer.field;
-                let lastMinimum = renderer.minValue;
-
-                // figure out ranges of each break.
-                // minimum is optional, so we have to keep track of the previous max as fallback
-                renderer.classBreakInfos.forEach((cbi: any) => {
-                    const minval = isNaN(cbi.classMinValue) ? lastMinimum : cbi.classMinValue;
-                    if (minval === cbi.classMaxValue) {
-                        cbi.definitionClause = `(${f} = ${cbi.classMaxValue})`;
-                    } else {
-                        cbi.definitionClause = `(${f} > ${minval} AND ${f} <= ${cbi.classMaxValue})`;
-                    }
-                    lastMinimum = cbi.classMaxValue;
-                });
-
-                break;
-            default:
-
-                // Renderer we dont support
-                console.warn('encountered unsupported renderer type: ' + renderer.type);
-        }
-    }
-
-    /**
-     * Will add extra properties to a renderer to support images.
-     * New properties .svgcode and .defaultsvgcode contains image source
-     * for app on each renderer item.
-     *
-     * @param {Object} renderer an ESRI renderer object in server JSON form. Param is modified in place
-     * @param {Object} legend object for the layer that maps legend label to data url of legend image
-     * @return {Promise} resolving when the renderer has been enhanced
-     */
-    async enhanceRenderer(renderer: any, legend: any): Promise<any> {
-
-        // TODO note somewhere (user docs) that everything fails if someone publishes a legend with two identical labels.
-        // UPDATE turns out services like this exist, somewhat. While the legend has unique labels, the renderer
-        //        can have multiple items with the same corresponding label.  Things still hang together in that case,
-        //        since we still have a 1-to-1 relationship between label and icon (all multiples in renderer have
-        //        same label)
-
-        // quick lookup object of legend names to data URLs.
-        // our legend object is in ESRI format, but was generated by us and only has info for a single layer.
-        // so we just grab item 0, which is the only item.
-        const legendLookup = {};
-
-        // store svgcode in the lookup
-        const legendItemPromises = legend.layers[0].legend.map((legItem: Promise<any>) =>
-            legItem.then(data =>
-                legendLookup[data.label] = data.svgcode
-            ));
-
-        // wait until all legend items are resolved and legend lookup is updated
-        await Promise.all(legendItemPromises);
-        switch (renderer.type) {
-            case this.SIMPLE:
-                renderer.svgcode = legendLookup[renderer.label];
-                break;
-            case this.UNIQUE_VALUE:
-                if (renderer.defaultLabel) {
-                    renderer.defaultsvgcode = legendLookup[renderer.defaultLabel];
-                }
-                renderer.uniqueValueInfos.forEach((uvi: any) => {
-                    uvi.svgcode = legendLookup[uvi.label];
-                });
-                break;
-            case this.CLASS_BREAKS:
-                if (renderer.defaultLabel) {
-                    renderer.defaultsvgcode = legendLookup[renderer.defaultLabel];
-                }
-                renderer.classBreakInfos.forEach((cbi: any) => {
-                    cbi.svgcode = legendLookup[cbi.label];
-                });
-                break;
-            default:
-                // Renderer we dont support
-                console.warn('encountered unsupported renderer type: ' + renderer.type);
-        }
-    }
-
-    /**
-     * Will inspect the field names in a renderer and adjust any mis-matched casing
-     * to align with the layer field definitions
-     *
-     * @private
-     * @param  {Object} renderer a layer renderer in json format
-     * @param  {Array} fields   list of field objects for the layer
-     * @returns {Object} the renderer with any fields adjusted with proper case
-     */
-    cleanRenderer(renderer: any, fields: Array<any>): void {
-
-        const enhanceField = (fieldName: string, fields: Array<any>) => {
-            if (!fieldName) {
-                // testing an undefined/unused field. return original value.
-                return fieldName;
-            }
-            let myField = fields.find(f => f.name === fieldName);
-            if (myField) {
-                // field is valid. donethanks.
-                return fieldName;
-            } else {
-                // do case-insensitive search
-                const lowName = fieldName.toLowerCase();
-                myField = fields.find(f => f.name.toLowerCase() === lowName);
-                if (myField) {
-                    // use the field definition casing
-                    return myField.name;
-                } else {
-                    // decided error here was too destructive. it would tank the layer,
-                    // while the drawback would mainly only be failed symbols.
-                    // just return fieldName and hope for luck.
-                    console.warn(`could not find renderer field ${fieldName}`);
-                    return fieldName;
-                }
-            }
-        };
-
-        switch (renderer.type) {
-            case this.SIMPLE:
-                break;
-            case this.UNIQUE_VALUE:
-                ['field1', 'field2', 'field3'].forEach(f => {
-                    // call ehnace case for each field
-                    renderer[f] = enhanceField(renderer[f], fields);
-                });
-                break;
-            case this.CLASS_BREAKS:
-                renderer.field = enhanceField(renderer.field, fields);
-                break;
-            default:
-                // Renderer we dont support
-                console.warn('encountered unsupported renderer type: ' + renderer.type);
-        }
-        return renderer;
-    }
-
-    /**
-     * Given feature attributes, find the renderer node that would draw it
-     *
-     * @method searchRenderer
-     * @param {Object} attributes object of feature attribute key value pairs
-     * @param {Object} renderer an enhanced renderer (see function enhanceRenderer)
-     * @return {Object} an Object with svgcode and symbol properties for the matched renderer item
-     */
-    searchRenderer(attributes: Object, renderer: any): Object {
-
-        let svgcode: string;
-        let symbol = {};
-
-        switch (renderer.type) {
-            case this.SIMPLE:
-                svgcode = renderer.svgcode;
-                symbol = renderer.symbol;
-
-                break;
-
-            case this.UNIQUE_VALUE:
-
-                // make a key value for the graphic in question, using comma-space delimiter if multiple fields
-                // put an empty string when key value is null
-                let graphicKey = attributes[renderer.field1] === null ? '' : attributes[renderer.field1];
-
-                // all key values are stored as strings.  if the attribute is in a numeric column, we must convert it to a string to ensure the === operator still works.
-                if (typeof graphicKey !== 'string') {
-                    graphicKey = graphicKey.toString();
-                }
-
-                // TODO investigate possibility of problems due to falsey logic.
-                //      e.g. if we had a field2 with empty string, would app expect
-                //           'value1, ' or 'value1'
-                //      need to brew up some samples to see what is possible in ArcMap
-                if (renderer.field2) {
-                    const delim = renderer.fieldDelimiter || ', ';
-                    graphicKey = graphicKey + delim + attributes[renderer.field2];
-                    if (renderer.field3) {
-                        graphicKey = graphicKey + delim + attributes[renderer.field3];
-                    }
-                }
-
-                // search the value maps for a matching entry.  if no match found, use the default image
-                const uvi = renderer.uniqueValueInfos.find(uvi => uvi.value === graphicKey);
-                if (uvi) {
-                    svgcode = uvi.svgcode;
-                    symbol = uvi.symbol;
-                } else {
-                    svgcode = renderer.defaultsvgcode;
-                    symbol = renderer.defaultSymbol;
-                }
-
-                break;
-
-            case this.CLASS_BREAKS:
-
-                const gVal = parseFloat(attributes[renderer.field]);
-                const lower = renderer.minValue;
-
-                svgcode = renderer.defaultsvgcode;
-                symbol = renderer.defaultSymbol;
-
-                // check for outside range on the low end
-                if (gVal < lower) { break; }
-
-                // array of minimum values of the ranges in the renderer
-                let minSplits = renderer.classBreakInfos.map((cbi: any) => cbi.classMaxValue);
-                minSplits.splice(0, 0, lower - 1); // put lower-1 at the start of the array and shift all other entries by 1
-
-                // attempt to find the range our gVal belongs in
-                const cbi = renderer.classBreakInfos.find((cbi: any, index: string | number) => gVal > minSplits[index] &&
-                    gVal <= cbi.classMaxValue);
-                if (!cbi) { // outside of range on the high end
-                    break;
-                }
-                svgcode = cbi.svgcode;
-                symbol = cbi.symbol;
-
-                break;
-
-            default:
-                console.warn(`Unknown renderer type encountered - ${renderer.type}`);
-
-        }
-
-        // make an empty svg graphic in case nothing is found to avoid undefined inside the filters
-        if (this.isUn(svgcode)) {
-            svgcode = svgjs(window.document.createElement('div')).size(this.CONTAINER_SIZE, this.CONTAINER_SIZE).svg();
-        }
-
-        return { svgcode, symbol };
-
-    }
-
     /**
      * Given feature attributes, return the image URL for that feature/graphic object.
      *
@@ -342,9 +36,8 @@ export default class SymbologyService extends BaseBase {
      * @param {Object} renderer an enhanced renderer (see function enhanceRenderer)
      * @return {String} svgcode Url to the features symbology image
      */
-    getGraphicIcon(attributes: Object, renderer: Object): string {
-        const renderInfo: any = this.searchRenderer(attributes, renderer);
-        return renderInfo.svgcode;
+    getGraphicIcon(attributes: Object, renderer: BaseRenderer): string {
+        return renderer.getGraphicIcon(attributes);
     }
 
     /**
@@ -355,20 +48,19 @@ export default class SymbologyService extends BaseBase {
      * @param {Object} renderer an enhanced renderer (see function enhanceRenderer)
      * @return {Object} an ESRI Symbol object in server format
      */
-    getGraphicSymbol(attributes: Object, renderer: Object): Object {
-        const renderInfo: any = this.searchRenderer(attributes, renderer);
-        return renderInfo.symbol;
+    getGraphicSymbol(attributes: Object, renderer: BaseRenderer): esri.Symbol {
+        return renderer.getGraphicSymbol(attributes);
     }
 
     makeRenderer(esriRenderer: esri.Renderer, fields: Array<esri.Field>, falseRenderer: boolean = false): BaseRenderer {
         switch (esriRenderer.type) {
-            case 'simple':
+            case this.SIMPLE:
                 return new SimpleRenderer(<esri.SimpleRenderer>esriRenderer, fields);
 
-            case 'class-breaks':
-                return new ClassBreaksRenderer(<esri.ClassBreaksRenderer>esriRenderer, fields);
+            case this.CLASS_BREAKS:
+                return new ClassBreaksRenderer(<esri.ClassBreaksRenderer>esriRenderer, fields, falseRenderer);
 
-            case 'unique-value':
+            case this.UNIQUE_VALUE:
                 return new UniqueValueRenderer(<esri.UniqueValueRenderer>esriRenderer, fields, falseRenderer);
 
             default:
@@ -546,6 +238,10 @@ export default class SymbologyService extends BaseBase {
         };
     }
 
+    async generateBlankSymbology(): Promise<string> {
+        return svgjs(this.window.document.createElement('div')).size(this.CONTAINER_SIZE, this.CONTAINER_SIZE).svg();
+    }
+
     /**
      * Generate an SVG string for an ESRI symbol.
      * @private
@@ -702,8 +398,6 @@ export default class SymbologyService extends BaseBase {
             }
         };
 
-        // TODO this is using server symbol definitions. we might need to adjust to use ESRI JS API defs.
-        //      e.g. esriSMS() would become [simple-marker]()
         // jscs doesn't like enhanced object notation
         // jscs:disable requireSpacesInAnonymousFunctionExpression
         const symbolTypes = {
@@ -847,7 +541,7 @@ export default class SymbologyService extends BaseBase {
         }
         catch (error) {
             console.log(error);
-            return ''; // TODO hardcode a warning icon? a blank white square?
+            return this.generateBlankSymbology(); // TODO create a warning icon instead?
         }
 
         /**
