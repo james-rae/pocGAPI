@@ -4,11 +4,13 @@ import sqlParser from 'js-sql-parser';
 // against an attribute object (i.e. a key-value dictionary). Has limited support for basic query logic
 // (can be expanded)
 
+interface Attribute { [x: string]: any; }
+
 // for science. baseclass of all Aql classes. if we have a common property we can add here
 class AqlRoot {
 
     // added 'evaluate' to keep TypeScript happy
-    evaluate (attribute?: any): any {
+    evaluate (attribute?: Attribute): any {
         return;
     }
 }
@@ -50,7 +52,7 @@ class AqlLiteral extends AqlAtomic {
 class AqlIdentifier extends AqlAtomic {
     // constructor param is the property name of the attribute
 
-    evaluate (attribute: { [x: string]: any; }): any {
+    evaluate (attribute: Attribute): any {
         return attribute[this.value];
     }
 }
@@ -66,56 +68,56 @@ class AqlArray extends AqlAtomic {
 
 // handles an equals operator
 class AqlEquals extends AqlDiatomic {
-    evaluate (attribute: any): boolean {
+    evaluate (attribute: Attribute): boolean {
         return this.left.evaluate(attribute) === this.right.evaluate(attribute);
     }
 }
 
 // handles a not-equals operator
 class AqlNotEquals extends AqlDiatomic {
-    evaluate (attribute: any): boolean {
+    evaluate (attribute: Attribute): boolean {
         return this.left.evaluate(attribute) !== this.right.evaluate(attribute);
     }
 }
 
 // handles a greater-than-equals operator
 class AqlGreaterEquals extends AqlDiatomic {
-    evaluate (attribute: any): boolean {
+    evaluate (attribute: Attribute): boolean {
         return this.left.evaluate(attribute) >= this.right.evaluate(attribute);
     }
 }
 
 // handles a less-than-equals operator
 class AqlLessEquals extends AqlDiatomic {
-    evaluate (attribute: any): boolean {
+    evaluate (attribute: Attribute): boolean {
         return this.left.evaluate(attribute) <= this.right.evaluate(attribute);
     }
 }
 
 // handles a greater-than operator
 class AqlGreater extends AqlDiatomic {
-    evaluate (attribute: any): boolean {
+    evaluate (attribute: Attribute): boolean {
         return this.left.evaluate(attribute) > this.right.evaluate(attribute);
     }
 }
 
 // handles a less-than operator
 class AqlLess extends AqlDiatomic {
-    evaluate (attribute: any): boolean {
+    evaluate (attribute: Attribute): boolean {
         return this.left.evaluate(attribute) < this.right.evaluate(attribute);
     }
 }
 
 // handles an and operator
 class AqlAnd extends AqlDiatomic {
-    evaluate (attribute: any): boolean {
+    evaluate (attribute: Attribute): boolean {
         return this.left.evaluate(attribute) && this.right.evaluate(attribute);
     }
 }
 
 // handles an or operator
 class AqlOr extends AqlDiatomic {
-    evaluate (attribute: any): boolean {
+    evaluate (attribute: Attribute): boolean {
         return this.left.evaluate(attribute) || this.right.evaluate(attribute);
     }
 }
@@ -130,7 +132,7 @@ class AqlIn extends AqlDiatomic {
         this.hasNot = hasNot;
     }
 
-    evaluate (attribute: any): any {
+    evaluate (attribute: Attribute): any {
         // we assume .right is an array (AqlArray)
         const result = this.right.evaluate(attribute).includes(this.left.evaluate(attribute));
         return this.hasNot ? !result : result;
@@ -149,7 +151,7 @@ class AqlLike extends AqlDiatomic {
         this.escapeVal = escape ? escape.value : null;
     }
 
-    evaluate (attribute: any): boolean {
+    evaluate (attribute: Attribute): boolean {
         // we assume .right evaulates to a string
         const attVal = this.left.evaluate(attribute);
         let pattern = this.right.evaluate(attribute);
@@ -205,7 +207,7 @@ class AqlPrefix extends AqlAtomic {
         }
     }
 
-    evaluate (attribute: any): number {
+    evaluate (attribute: Attribute): number {
         // check if value is a number and is negative
         const result = this.value.evaluate(attribute);
         if (!isNaN(result)) {
@@ -218,14 +220,14 @@ class AqlPrefix extends AqlAtomic {
 
 // handles a not operator
 class AqlNot extends AqlAtomic {
-    evaluate (attribute: any): boolean {
+    evaluate (attribute: Attribute): boolean {
         return !this.value.evaluate(attribute);
     }
 }
 
 // handles a set of parenthesis
 class AqlParentheses extends AqlAtomic {
-    evaluate (attribute: any): boolean {
+    evaluate (attribute: Attribute): boolean {
         // INTENSE
         return this.value.evaluate(attribute);
     }
@@ -234,13 +236,13 @@ class AqlParentheses extends AqlAtomic {
 // handles an inline function.
 // can add functions as we find need to support them
 class AqlFunctionCall extends AqlRoot {
-    params: any;
-    fName: any;
+    params: Array<AqlRoot>;
+    fName: string;
 
-    constructor (functionName: string, params: any) {
+    constructor (functionName: string, params: Array<AqlRoot>) {
         super();
 
-        this.params = params; // array of parameters for the function. can be none or many
+        this.params = params || []; // array of parameters for the function. can be none or many
 
         // get what function we are doing, check for support
         this.fName = functionName.toLowerCase();
@@ -249,9 +251,9 @@ class AqlFunctionCall extends AqlRoot {
         }
     }
 
-    evaluate (attribute: any): any {
+    evaluate (attribute: Attribute): any {
         // call our named function. evaluate the parameters array then pass them as actual params to the function
-        return this[this.fName](...this.params.map((p: { evaluate: (arg0: any) => void; }) => p.evaluate(attribute)));
+        return this[this.fName](...this.params.map((p: AqlRoot) => p.evaluate(attribute)));
     }
 
     // assumes param will be a string
@@ -314,10 +316,10 @@ function sqlNodeToAqlNode (node: { type: string; }): AqlRoot {
 
             return new aqlClass(sqlNodeToAqlNode(n.left), sqlNodeToAqlNode(n.right));
         },
-        FunctionCall:  (n: { name: any; params: { map: (arg0: (p: any) => any) => void; }; }): AqlFunctionCall => {
+        FunctionCall:  (n: { name: string; params: { map: (arg0: (p: any) => any) => any; }; }): AqlFunctionCall => {
             return new AqlFunctionCall(n.name, n.params.map((p: any) => sqlNodeToAqlNode(p)));
         },
-        Identifier: (n: { value: any; }): AqlIdentifier => {
+        Identifier: (n: { value: string; }): AqlIdentifier => {
             return new AqlIdentifier(n.value);
         },
         Prefix: (n: { value: any; prefix: any; }): AqlPrefix => {
@@ -327,10 +329,10 @@ function sqlNodeToAqlNode (node: { type: string; }): AqlRoot {
             // number in string form
             return new AqlLiteral(Number(n.value));
         },
-        String: (n: { value: any; }): AqlLiteral => {
+        String: (n: { value: string; }): AqlLiteral => {
             // remove embedded quotes from string
             // TODO check if escaped double quote actually exists or was just part of the npm test page output display
-            let s = n.value;
+            let s: string = n.value;
             if (s.startsWith('"') || s.startsWith(`'`)) {
                 s = s.substring(1, s.length - 1);
             } else if (s.startsWith('\"')) {
@@ -338,7 +340,7 @@ function sqlNodeToAqlNode (node: { type: string; }): AqlRoot {
             }
             return new AqlLiteral(s);
         },
-        Boolean: (n: { value: { toLowerCase: () => string; }; }): AqlLiteral => {
+        Boolean: (n: { value: string; }): AqlLiteral => {
             // node values are in all caps
             return new AqlLiteral(n.value.toLowerCase() === 'true');
         },
