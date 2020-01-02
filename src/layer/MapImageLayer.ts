@@ -24,7 +24,7 @@ export default class MapImageLayer extends AttribLayer {
     }
 
     // timesaver, sick of casting this var everywhere
-    protected typedInnerLayer() :esri.MapImageLayer {
+    protected typedInnerLayer(): esri.MapImageLayer {
         return (<esri.MapImageLayer>this.innerLayer);
     }
 
@@ -121,7 +121,7 @@ export default class MapImageLayer extends AttribLayer {
             return this.typedInnerLayer().allSublayers.find((s: esri.Sublayer) => {
                 return s.id === targetIndex;
             });
-        }
+        };
 
         // don't worry about structured legend. the legend part is separate from
         // the layers part. we just load what we are told to. the legend module
@@ -298,6 +298,8 @@ export default class MapImageLayer extends AttribLayer {
 
             // NOTE: can consider alternates, like innerLayer.url + / + layerIdx
             const serviceUrl: string = findSublayer(mlFC.layerIdx).url;
+
+            // TODO check if we have custom renderer, add to options parameter here
             const pLMD: Promise<void> = mlFC.loadLayerMetadata(serviceUrl).then(() => {
                 // apply any updates that were in the configuration snippets
                 const subC: RampLayerMapImageLayerEntryConfig = subConfigs[mlFC.layerIdx];

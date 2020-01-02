@@ -133,6 +133,7 @@ export default async (esriApiUrl: string, window: DojoWindow, epsgLookup: EpsgLo
         ['esri/renderers/ClassBreaksRenderer', 'ClassBreaksRenderer'],
         ['esri/renderers/SimpleRenderer', 'SimpleRenderer'],
         ['esri/renderers/UniqueValueRenderer', 'UniqueValueRenderer'],
+        ['esri/renderers/support/jsonUtils', 'rendererUtils'],
         ['esri/request', 'esriRequest'],
         ['esri/symbols/PictureMarkerSymbol', 'PictureMarkerSymbol'],
         ['esri/symbols/SimpleFillSymbol', 'SimpleFillSymbol'],

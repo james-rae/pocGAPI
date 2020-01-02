@@ -2,7 +2,7 @@
 // TODO add proper comments
 
 import esri = __esri;
-import { InfoBundle, LayerState, RampLayerConfig } from '../gapiTypes';
+import { InfoBundle, LayerState, RampLayerConfig, LegendSymbology } from '../gapiTypes';
 import BaseBase from '../BaseBase';
 import { TypedEvent } from '../Event';
 import BaseFC from './BaseFC';
@@ -301,6 +301,10 @@ export default class BaseLayer extends BaseBase {
      */
     supportsFeatures (layerIdx: number = undefined): boolean {
         return this.getFC(layerIdx).supportsFeatures;
+    }
+
+    getLegend (layerIdx: number = undefined): Array<LegendSymbology> {
+        return this.getFC(layerIdx).legend;
     }
 
 }

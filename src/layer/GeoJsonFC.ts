@@ -19,7 +19,7 @@ export default class GeoJsonFC extends AttribFC {
 
         const l: esri.FeatureLayer = <esri.FeatureLayer>this.parentLayer.innerLayer;
 
-                // properties for all endpoints
+        // properties for all endpoints
         this.layerType = 'Feature Layer'; // TODO validate this matches server string. TODO validate we don't want to change to a different value. TODO define an Enum for layerType?
         this.supportsFeatures = true;
 
@@ -47,16 +47,15 @@ export default class GeoJsonFC extends AttribFC {
         }
         */
 
-        // TODO add in renderer and legend magic
-        // add renderer and legend
-        /*
-        const renderer = customRenderer.type ? customRenderer : serviceResult.drawingInfo.renderer;
-        layerData.renderer = geoApi.symbology.cleanRenderer(renderer, serviceResult.fields);
+        // if there was a custom renderer in the config, it would have been applied when the
+        // layer was constructed. no need to check here.
+        this.renderer = this.gapi.utils.symbology.makeRenderer(l.renderer, this.fields);
 
-        layerData.legend = geoApi.symbology.rendererToLegend(layerData.renderer, featureIdx,
-            serviceResult.fields);
-        geoApi.symbology.enhanceRenderer(layerData.renderer, layerData.legend);
-        */
+        // this array will have a set of promises that resolve when all the legend svg has drawn.
+        // for now, will not include that set (promise.all'd) on the layer load blocker;
+        // don't want to stop a layer from loading just because an icon won't draw.
+        // ideally we'll have placeholder symbol (white square, loading symbol, caution symbol, etc)
+        this.legend = this.gapi.utils.symbology.rendererToLegend(this.renderer);
 
         const loadData: AttributeLoaderDetails = {
             sourceGraphics: l.source,

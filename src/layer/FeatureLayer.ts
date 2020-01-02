@@ -117,6 +117,7 @@ export default class FeatureLayer extends AttribLayer {
 
         // update asynch data
         // TODO do all this lol
+        // TODO check if we have custom renderer, add to options parameter here
         const pLD: Promise<void> = featFC.loadLayerMetadata(layerUrl).then(() => {
             // apply any config based overrides to the data we just downloaded
             featFC.nameField = this.origRampConfig.nameField || featFC.nameField || '';

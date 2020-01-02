@@ -20,7 +20,7 @@ export default class UtilModule extends BaseBase {
     query: QueryService;
     highlight: HighlightService;
     proj: ProjectionService;
-    symbology: SymbologyService
+    symbology: SymbologyService;
 
     constructor (infoBundle: InfoBundle, epsgFunction: EpsgLookup = undefined) {
         super(infoBundle);
