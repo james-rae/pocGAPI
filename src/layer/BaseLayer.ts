@@ -293,6 +293,28 @@ export default class BaseLayer extends BaseBase {
     }
 
     /**
+     * Returns the opacity of the layer/sublayer.
+     *
+     * @function getOpacity
+     * @param {Integer} [layerIdx] targets a layer index to get opacity for. Uses first/only if omitted.
+     * @returns {Boolean} opacity of the layer/sublayer
+     */
+    getOpacity (layerIdx: number = undefined): number {
+        return this.getFC(layerIdx).getOpacity();
+    }
+
+    /**
+     * Applies opacity to feature class.
+     *
+     * @function setOpacity
+     * @param {Decimal} value the new opacity setting. Valid value is anything between 0 and 1, inclusive.
+     * @param {Integer} [layerIdx] targets a layer index to get opacity for. Uses first/only if omitted.
+     */
+    setOpacity (value: number, layerIdx: number = undefined): void {
+        this.getFC(layerIdx).setOpacity(value);
+    }
+
+    /**
      * Indicates if a feature class supports features (false would be an image/raster/etc)
      *
      * @function supportsFeatures

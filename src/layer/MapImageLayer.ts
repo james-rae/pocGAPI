@@ -381,7 +381,7 @@ export default class MapImageLayer extends AttribLayer {
      * Returns the visibility of the layer/sublayer.
      *
      * @function getVisibility
-     * @param {Integer} [layerIdx] targets a layer index to get visibility for. Uses first/only if omitted.
+     * @param {Integer} [layerIdx] targets a layer index to get visibility for. Layer visibility is used if omitted.
      * @returns {Boolean} visibility of the layer/sublayer
      */
     getVisibility (layerIdx: number = undefined): boolean {
@@ -397,13 +397,47 @@ export default class MapImageLayer extends AttribLayer {
      *
      * @function setVisibility
      * @param {Boolean} value the new visibility setting
-     * @param {Integer} [layerIdx] targets a layer index to get visibility for. Uses first/only if omitted.
+     * @param {Integer} [layerIdx] targets a layer index to set visibility for. Layer visibility is set if omitted.
      */
     setVisibility (value: boolean, layerIdx: number = undefined): void {
         if (this.isUn(layerIdx)) {
             this.innerLayer.visible = value;
         } else {
             super.setVisibility(value, layerIdx);
+        }
+    }
+
+    /**
+     * Returns the opacity of the layer/sublayer.
+     *
+     * @function getOpacity
+     * @param {Integer} [layerIdx] targets a layer index to get opacity for. Layer opacity is used if omitted.
+     * @returns {Boolean} opacity of the layer/sublayer
+     */
+    getOpacity (layerIdx: number = undefined): number {
+        if (this.isUn(layerIdx) || !this.isDynamic) {
+            return this.innerLayer.opacity;
+        } else {
+            return super.getOpacity(layerIdx);
+        }
+
+    }
+
+    /**
+     * Applies opacity to feature class.
+     *
+     * @function setOpacity
+     * @param {Decimal} value the new opacity setting. Valid value is anything between 0 and 1, inclusive.
+     * @param {Integer} [layerIdx] targets a layer index to get opacity for. Layer opacity is set if omitted.
+     */
+    setOpacity (value: number, layerIdx: number = undefined): void {
+        if (this.isUn(layerIdx) || !this.isDynamic) {
+            this.innerLayer.opacity = value;
+
+            // TODO check our implementation inside MapImageFC. we might need to adjust the opacity value of all the
+            //      FCs if we are in the not-dynamic case
+        } else {
+            super.setOpacity(value, layerIdx);
         }
     }
 
