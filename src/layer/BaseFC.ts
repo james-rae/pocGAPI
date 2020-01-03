@@ -51,4 +51,26 @@ export default class BaseFC extends BaseBase {
         this.parentLayer.innerLayer.visible = value;
     }
 
+    /**
+     * Returns the opacity of the feature class.
+     *
+     * @function getOpacity
+     * @returns {Boolean} opacity of the feature class
+     */
+    getOpacity (): number {
+        // basic case - fc opac === layer opac
+        return this.parentLayer.innerLayer.opacity;
+    }
+
+    /**
+     * Applies opacity to feature class.
+     *
+     * @function setOpacity
+     * @param {Boolean} value the new opacity setting
+     */
+    setOpacity (value: number): void {
+        // basic case - set layer opacity
+        this.parentLayer.innerLayer.opacity = value;
+    }
+
 }
