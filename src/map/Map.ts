@@ -3,7 +3,7 @@
 
 
 import esri = __esri;
-import { InfoBundle } from '../gapiTypes';
+import { InfoBundle, RampMapConfig } from '../gapiTypes';
 import MapBase from './MapBase';
 import LayerBase from '../layer/BaseLayer';
 import HighlightLayer from '../layer/HighlightLayer';
@@ -13,19 +13,28 @@ export default class Map extends MapBase {
     // TODO think about how to expose. protected makes sense, but might want to make it public to allow hacking and use by a dev module if we decide to
     innerView: esri.MapView;
 
-    constructor (infoBundle: InfoBundle, config: any, targetDiv: string) {
+    constructor (infoBundle: InfoBundle, config: RampMapConfig, targetDiv: string) {
         // TODO massage incoming config to something that conforms to esri.MapProperties interface
         const esriConfig = config; // this becomes real logic
 
         super(infoBundle, esriConfig);
 
-        // TODO extract more from config and set appropriate view properties (e.g. intial extent, initial projection, LODs)
-        this.innerView = new this.esriBundle.MapView({
+        const esriViewConfig: esri.MapViewProperties = {
             map: this.innerMap,
             container: targetDiv,
-            center: [-76.772, 44.423],
-            zoom: 10
-        });
+            constraints: {
+                lods: <Array<esri.LOD>>config.lods
+            },
+            spatialReference: config.extent.spatialReference,
+            extent: config.extent,
+
+            // TODO remove these once starting extent is working
+            // center: [-76.772, 44.423],
+            // zoom: 10
+        };
+
+        // TODO extract more from config and set appropriate view properties (e.g. intial extent, initial projection, LODs)
+        this.innerView = new this.esriBundle.MapView(esriViewConfig);
     }
 
     // TODO implement

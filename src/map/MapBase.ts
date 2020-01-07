@@ -4,7 +4,7 @@
 // TODO add proper comments
 
 import esri = __esri;
-import { InfoBundle } from '../gapiTypes';
+import { InfoBundle, RampMapConfig } from '../gapiTypes';
 import BaseBase from '../BaseBase';
 
 // TODO would ideally call this BaseMap, but that would get confused with Basemap.
@@ -13,9 +13,13 @@ export default class MapBase extends BaseBase {
     // TODO think about how to expose. protected makes sense, but might want to make it public to allow hacking and use by a dev module if we decide to
     innerMap: esri.Map;
 
-    protected constructor (infoBundle: InfoBundle, config: esri.MapProperties) {
+    protected constructor (infoBundle: InfoBundle, config: RampMapConfig) {
         super(infoBundle);
-        this.innerMap = new this.esriBundle.Map(config);
+        const esriConfig: esri.MapProperties = {
+            // TODO remove once real basemap engine is working
+            basemap: 'topo'
+        };
+        this.innerMap = new this.esriBundle.Map(esriConfig);
 
     }
 

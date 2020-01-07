@@ -2,7 +2,7 @@
 // once this becomes a proper library, it will likely get trashed and gapi.ts will become the primary file
 // (we either rename it to main, or do as buildmaster miles commands )
 
-import { GeoApi, DojoWindow, EsriBundle } from './gapiTypes';
+import { GeoApi, DojoWindow, EsriBundle, RampExtentConfig, RampMapConfig } from './gapiTypes';
 import GapiLoader from './gapi';
 import Map from './map/Map';
 import FeatureLayer from './layer/FeatureLayer';
@@ -16,9 +16,23 @@ gapiPromise.then((gapi: GeoApi) => {
 
   // const fakeMap = gapi.fakeNewsMaps.makeMap('dirtyDiv');
 
-  const esriMapConfig = {
-    basemap: 'topo'
+  const esriMapConfig: RampMapConfig = {
+    // basemap: 'topo'
+
+    extent: {
+      xmax: -5007771.626060756,
+      xmin: -16632697.354854,
+      ymax: 10015875.184845109,
+      ymin: 5022907.964742964,
+
+      spatialReference: {
+        wkid: 102100,
+        latestWkid: 3857
+      }
+    },
+    lods: gapi.maps.defaultLODs(gapi.maps.defaultTileSchemas()[1]) // idx 1 = mercator
   };
+
   const map: Map = gapi.maps.createMap(esriMapConfig, 'dirtyDiv');
 
 

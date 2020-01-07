@@ -130,6 +130,8 @@ export interface ArcGisServerUrl {
     index: number;
 }
 
+// ----------------------- CLIENT CONFIG INTERFACES FOR AUTOCOMPLETE -----------------------------------
+
 export interface RampSpatialReference {
     wkid?: number;
     latestWkid?: number;
@@ -183,4 +185,25 @@ export interface RampLayerConfig {
     nameField?: string;
     tooltipField?: string;
     layerEntries?: Array<RampLayerMapImageLayerEntryConfig> | Array<RampLayerWmsLayerEntryConfig>;
+}
+
+export interface RampExtentConfig {
+    xmin: number;
+    xmax: number;
+    ymin: number;
+    ymax: number;
+    spatialReference: RampSpatialReference;
+}
+
+export interface RampLodConfig {
+    level: number;
+    resolution: number;
+    scale: number;
+}
+
+// TODO actual ramp config is kinda wonky, split over lots of classes
+//      for now this will just serve as a nice type for the config
+export interface RampMapConfig {
+    lods: Array<RampLodConfig>;
+    extent: RampExtentConfig;
 }
