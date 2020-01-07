@@ -23,22 +23,18 @@ export default class Map extends MapBase {
             map: this.innerMap,
             container: targetDiv,
             constraints: {
-                lods: config.lods
+                lods: <Array<esri.LOD>>config.lods
             },
             spatialReference: config.extent.spatialReference,
             extent: config.extent,
 
             // TODO remove these once starting extent is working
-            center: [-76.772, 44.423],
-            zoom: 10
+            // center: [-76.772, 44.423],
+            // zoom: 10
         };
 
         // TODO extract more from config and set appropriate view properties (e.g. intial extent, initial projection, LODs)
-        this.innerView = new this.esriBundle.MapView({
-            map: this.innerMap,
-            container: targetDiv,
-
-        });
+        this.innerView = new this.esriBundle.MapView(esriViewConfig);
     }
 
     // TODO implement
