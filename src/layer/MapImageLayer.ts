@@ -344,12 +344,12 @@ export default class MapImageLayer extends AttribLayer {
 
         // get mapName of the legend entry from the service to use as the name if not provided in config
         if (!this.name) {
-            const defService = this.esriBundle.esriRequest(this.typedInnerLayer().url, {
+            const serviceRequest: Promise<esri.RequestResponse> = this.esriBundle.esriRequest(this.typedInnerLayer().url, {
                 query: {
                     f: 'json'
                 }
             });
-            const setTitle = defService.then((serviceResult: esri.RequestResponse) => {
+            const setTitle = serviceRequest.then((serviceResult: esri.RequestResponse) => {
                 if (serviceResult.data) {
                     this.name = serviceResult.data.mapName || '';
                     this.layerTree.name = this.name;

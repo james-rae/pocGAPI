@@ -17,7 +17,7 @@ export class BaseRenderer {
     symbolUnits: Array<BaseSymbolUnit>;
     defaultUnit: BaseSymbolUnit;
     type: RendererType;
-    protected falseRenderer: boolean;
+    falseRenderer: boolean;
 
     // falseRenderer is set to true when we are creating a fake renderer to facilitate generating a legend from
     // a non-feature service, like a tile layer or imagery layer.
@@ -115,6 +115,10 @@ export class BaseRenderer {
     }
 
     protected makeElseClause(): string {
+        if (this.falseRenderer) {
+            return '';
+        }
+
         const elseClauseGuts = this.symbolUnits
             .map(pl => pl.definitionClause)
             .join(' OR ');

@@ -156,4 +156,11 @@ gapiPromise.then((gapi: GeoApi) => {
     console.log('have a look at this legend', imgLayer.getLegend(6));
 
   });
+
+  // ------ random tests --------
+  gapi.utils.symbology.mapServerToLocalLegend('https://section917.canadacentral.cloudapp.azure.com/arcgis/rest/services/CESI/MapServer/').then(legend => {
+    console.log('legend from map server');
+    console.table(legend);
+  });
+
 });
