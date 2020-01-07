@@ -14,10 +14,8 @@ export default class Map extends MapBase {
     innerView: esri.MapView;
 
     constructor (infoBundle: InfoBundle, config: RampMapConfig, targetDiv: string) {
-        // TODO massage incoming config to something that conforms to esri.MapProperties interface
-        const esriConfig = config; // this becomes real logic
 
-        super(infoBundle, esriConfig);
+        super(infoBundle, config);
 
         const esriViewConfig: esri.MapViewProperties = {
             map: this.innerMap,

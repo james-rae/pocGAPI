@@ -30,7 +30,16 @@ gapiPromise.then((gapi: GeoApi) => {
         latestWkid: 3857
       }
     },
-    lods: gapi.maps.defaultLODs(gapi.maps.defaultTileSchemas()[1]) // idx 1 = mercator
+    lods: gapi.maps.defaultLODs(gapi.maps.defaultTileSchemas()[1]), // idx 1 = mercator
+    basemaps: [{
+      id: 'esriImagery',
+      tileSchemaId: 'DEFAULT_ESRI_World_AuxMerc_3857',
+      layers: [{
+        layerType: 'esriTile',
+        url: 'http://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer'
+      }]
+    }],
+    initialBasemapId: 'esriImagery'
   };
 
   const map: Map = gapi.maps.createMap(esriMapConfig, 'dirtyDiv');

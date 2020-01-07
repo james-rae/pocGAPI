@@ -201,9 +201,27 @@ export interface RampLodConfig {
     scale: number;
 }
 
+export interface RampBasemapLayerConfig {
+    layerType: string;
+    url: string;
+    // TODO figure out if we need extra flag to mark as baselayer or referencelayer
+}
+
+export interface RampBasemapConfig {
+    id: string;
+    tileSchemaId: string;
+    name?: string;
+    description?: string;
+    altText?: string;
+    attribution?: any; // TODO flush out object later
+    layers: Array<RampBasemapLayerConfig>;
+}
+
 // TODO actual ramp config is kinda wonky, split over lots of classes
 //      for now this will just serve as a nice type for the config
 export interface RampMapConfig {
     lods: Array<RampLodConfig>;
     extent: RampExtentConfig;
+    basemaps: Array<RampBasemapConfig>;
+    initialBasemapId: string;
 }
