@@ -71,7 +71,7 @@ export class EsriBundle {
     Color: esri.ColorConstructor;
     dojoQuery: dojo.query;
     esriConfig: esri.config;
-    esriRequest: Function; // esri.request; // TODO figure out how to do this.  the esri.request doesn't align right with what dojo spits back. if it has to be a function, add the types to the signature
+    esriRequest: (url: string, opts: esri.RequestOptions) => Promise<esri.RequestResponse>; // esri.request; // TODO figure out how to do this.  the esri.request doesn't align right with what dojo spits back. if it has to be a function, add the types to the signature
 }
 
 export interface EpsgLookup {

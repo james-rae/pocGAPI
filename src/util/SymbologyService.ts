@@ -625,40 +625,52 @@ export default class SymbologyService extends BaseBase {
      */
     rendererToLegend(renderer: BaseRenderer): Array<LegendSymbology> {
 
-        const legendCollater: {[key: string]: Array<BaseSymbolUnit>} = {};
-
+        let finalSymbols: Array<Array<BaseSymbolUnit>>;
         // put all symbol units from the renderer in one nice array
         const allRendererSUs: Array<BaseSymbolUnit> = renderer.symbolUnits.slice(0); // make a copy
         if (renderer.defaultUnit) {
             allRendererSUs.push(renderer.defaultUnit);
         }
 
-        // collate the symbol units by the label. this collapses complex definitions into a nice looking legend.
-        // e.g. a renderer has SU for 'type=X' and 'type=Y', both with label 'Fun Stuff'. This merges the logic into
-        // one line on the legend for Fun Stuff!
-        allRendererSUs.forEach(su => {
-            if (legendCollater[su.label]) {
-                // not the first time we hit this label. add to the list
-                legendCollater[su.label].push(su);
-            } else {
-                legendCollater[su.label] = [su];
-            }
-        });
+        if (renderer.falseRenderer) {
+            // we don't need to do any key collation.
+            // this renderer was created from a server legend, so just do a 1-to-1
+            // recreation.
+            finalSymbols = allRendererSUs.map(rsu => [rsu]);
+        } else {
+            // collate the symbol units by the label. this collapses complex definitions into a nice looking legend.
+            // e.g. a renderer has SU for 'type=X' and 'type=Y', both with label 'Fun Stuff'. This merges the logic into
+            // one line on the legend for Fun Stuff!
 
-        // TODO this code will return the legend array in the order that object.keys presents the keys.
-        //      we may need to add some additional logic to enforce a different order.
-        //      e.g. alphabetical by label, with default being last.
-        //           alphabetical by label, default not treated special.
-        //           same order as renderer's array, with default being last.
+            const legendCollater: {[key: string]: Array<BaseSymbolUnit>} = {};
 
-        // iterate through the unique keys in the collater. process each legend item
-        return Object.keys(legendCollater).map((lbl: string) => {
-            const suSet = legendCollater[lbl];
+            allRendererSUs.forEach(su => {
+                if (legendCollater[su.label]) {
+                    // not the first time we hit this label. add to the list
+                    legendCollater[su.label].push(su);
+                } else {
+                    legendCollater[su.label] = [su];
+                }
+            });
+
+            // TODO this code will return the legend array in the order that object.keys presents the keys.
+            //      we may need to add some additional logic to enforce a different order.
+            //      e.g. alphabetical by label, with default being last.
+            //           alphabetical by label, default not treated special.
+            //           same order as renderer's array, with default being last.
+
+            // iterate through the unique keys in the collater. process each legend item
+            finalSymbols = Object.keys(legendCollater).map((lbl: string) => legendCollater[lbl]);
+        }
+
+        // iterate through the final symbol array. process each legend item
+        return finalSymbols.map(suSet => {
+            const firstSu: BaseSymbolUnit = suSet[0];
             const legendSym: LegendSymbology = {
-                label: lbl || '',
-                definitionClause: suSet.length === 1 ? suSet[0].definitionClause : `(${suSet.join(' OR ')})`,
+                label: firstSu.label || '',
+                definitionClause: suSet.length === 1 ? firstSu.definitionClause : `(${suSet.map(su => su.definitionClause).join(' OR ')})`,
                 svgcode: '', // TODO is '' ok? maybe we need white square svg? or some loading icon?
-                drawPromise: this.symbolToSvg(suSet[0].symbol).then(svg => {
+                drawPromise: this.symbolToSvg(firstSu.symbol).then(svg => {
                     // update the legend symbol object
                     legendSym.svgcode = svg;
 
@@ -679,32 +691,26 @@ export default class SymbologyService extends BaseBase {
      * @function getMapServerLegend
      * @private
      * @param  {String} layerUrl service url (root service, not indexed endpoint)
-     * @returns {Promise} resolves in an array of legend data
+     * @returns {Promise} resolves in an array of legend data in arcgis server json format
      *
      */
-    getMapServerLegend(layerUrl: string): Promise<any> {
+    private getMapServerLegend(layerUrl: string): Promise<any> {
 
         // standard json request with error checking
-        const defService = this.esriBundle.esriRequest({
-            url: `${layerUrl}/legend`,
-            content: { f: 'json' },
-            callbackParamName: 'callback',
-            handleAs: 'json',
-        });
+        const reqParams: esri.RequestOptions = {
+            query: { f: 'json' }
+        };
+        const serviceRequest: Promise<esri.RequestResponse> = this.esriBundle.esriRequest(`${layerUrl}/legend`, reqParams);
 
-        // wrap in promise to contain dojo deferred
-        // TODO this probably needs to be updated with the new return value structure of esriRequest
-        return new Promise((resolve, reject) => {
-            defService.then((srvResult: any) => {
+        return serviceRequest.then(srvResult => {
 
-                if (srvResult.error) {
-                    reject(srvResult.error);
-                } else {
-                    resolve(srvResult);
-                }
-            }, (error: any) => {
-                reject(error);
-            });
+           return srvResult.data;
+
+        }).catch((error: any) => {
+            console.error('error loading legend', error);
+            // TODO might want to not error. missing legend is not catastrophic.
+            //      instead, may want to generate fake json that will create an empty legend / error legend and return that.
+            throw new Error('problem loading legend from server, details on console');
         });
 
     }
@@ -721,7 +727,7 @@ export default class SymbologyService extends BaseBase {
      * @returns {Object} a fake unique value renderer based off the legend
      *
      */
-    mapServerLegendToRenderer(serverLegend: any, layerIndex: number): BaseRenderer {
+    private mapServerLegendToRenderer(serverLegend: any, layerIndex: number): BaseRenderer {
         const layerLegend = serverLegend.layers.find((l: any) => {
             return l.layerId === layerIndex;
         });
@@ -771,7 +777,7 @@ export default class SymbologyService extends BaseBase {
      * @param {Object} serverLegend legend json from an esri map server
      * @returns {Object} a fake unique value renderer based off the legend
      */
-    mapServerLegendToRendererAll(serverLegend: any): BaseRenderer {
+    private mapServerLegendToRendererAll(serverLegend: any): BaseRenderer {
 
         // TODO potential problem. if we have multiple layers with same label but different
         //      symbols, they will get combined in the legend making process.
@@ -814,7 +820,7 @@ export default class SymbologyService extends BaseBase {
      * @returns {Promise} resolves in a viewer-compatible legend for the given server and layer index
      *
      */
-    async mapServerToLocalLegend(mapServerUrl: string, layerIndex: number | string): Promise<any> {
+    async mapServerToLocalLegend(mapServerUrl: string, layerIndex: number | string = undefined): Promise<Array<LegendSymbology>> {
 
         // get esri legend from server
 
