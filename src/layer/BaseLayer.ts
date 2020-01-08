@@ -11,6 +11,8 @@ import NaughtyPromise from '../util/NaughtyPromise';
 
 export default class BaseLayer extends BaseBase {
 
+    uid: string;
+
     // TODO think about how to expose. protected makes sense, but might want to make it public to allow hacking and use by a dev module if we decide to
     //      could be the FCs need to access it so no choice
     innerLayer: esri.Layer;
@@ -48,6 +50,7 @@ export default class BaseLayer extends BaseBase {
     //      that actual implementer classes call in their constructors. e.g. for a file layer, might need to process file parts prior to running LayerBase stuff
     protected constructor (infoBundle: InfoBundle, rampConfig: RampLayerConfig) {
         super(infoBundle);
+        this.uid = this.gapi.utils.shared.generateUUID();
 
         this.visibilityChanged = new TypedEvent<boolean>();
         this.opacityChanged = new TypedEvent<number>();
@@ -193,7 +196,9 @@ export default class BaseLayer extends BaseBase {
         }
 
         // basic layer tree. fancier layers will simply steamroll over this
-        this.layerTree = new TreeNode(0, this.name);
+        // TODO reconsider the default uid. true value should be uid of 0th FC child.
+        //      if this always gets overwritten then we likely dont care.
+        this.layerTree = new TreeNode(0, this.uid, this.name);
 
         // TODO implement extent defaulting. Need to add property, get appropriate format from incoming ramp config, maybe need an interface
         /*

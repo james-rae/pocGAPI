@@ -243,7 +243,7 @@ export default class MapImageLayer extends AttribLayer {
             if (subLayer.sublayers && subLayer.sublayers.length > 0) {
                 // group sublayer. set up our tree for the client, then crawl childs.
                 const gName = (subC ? subC.name : '') || subLayer.title || ''; // config if exists, else server, else none
-                const treeGroup = new TreeNode(sid, gName, false);
+                const treeGroup = new TreeNode(sid, '', gName, false); // TODO leaving uid blank. there is no object to tie back to. ensure not a problem for vue bindings
                 parentTreeNode.childs.push(treeGroup);
 
                 // process the kids in the group.
@@ -261,13 +261,13 @@ export default class MapImageLayer extends AttribLayer {
                     leafsToInit.push(miFC);
                 }
 
-                const treeLeaf = new TreeNode(sid, this.fcs[sid].name, true);
+                const treeLeaf = new TreeNode(sid, this.fcs[sid].uid, this.fcs[sid].name, true);
                 parentTreeNode.childs.push(treeLeaf);
             }
         };
 
         // TODO validate -1 is how we are notating a map image layer root (effectively service folder, no real index)
-        this.layerTree = new TreeNode(-1, this.origRampConfig.name, false); // public structure describing the tree
+        this.layerTree = new TreeNode(-1, this.uid, this.origRampConfig.name, false); // public structure describing the tree
 
         // process the child layers our config is interested in, and all their children.
         (<Array<RampLayerMapImageLayerEntryConfig>>this.origRampConfig.layerEntries).forEach((le: RampLayerMapImageLayerEntryConfig) => {
@@ -369,8 +369,13 @@ export default class MapImageLayer extends AttribLayer {
     // so for properties that fall into this category, we intercept the common routies, and treat an undefined
     // layerIdx as targeting the layer proper (in other layers, undefined means take the default child)
 
+    parentIdx(layerIdx: number): boolean {
+        // TODO at the moment, we are using -1 as root indicator in the layerTree.
+        return this.isUn(layerIdx) || (layerIdx === -1);
+    }
+
     getName (layerIdx: number = undefined): string {
-        if (this.isUn(layerIdx)) {
+        if (this.parentIdx(layerIdx)) {
             return this.name;
         } else {
             return super.getName(layerIdx);
@@ -385,7 +390,7 @@ export default class MapImageLayer extends AttribLayer {
      * @returns {Boolean} visibility of the layer/sublayer
      */
     getVisibility (layerIdx: number = undefined): boolean {
-        if (this.isUn(layerIdx)) {
+        if (this.parentIdx(layerIdx)) {
             return this.innerLayer.visible;
         } else {
             return super.getVisibility(layerIdx);
@@ -400,7 +405,7 @@ export default class MapImageLayer extends AttribLayer {
      * @param {Integer} [layerIdx] targets a layer index to set visibility for. Layer visibility is set if omitted.
      */
     setVisibility (value: boolean, layerIdx: number = undefined): void {
-        if (this.isUn(layerIdx)) {
+        if (this.parentIdx(layerIdx)) {
             this.innerLayer.visible = value;
         } else {
             super.setVisibility(value, layerIdx);
@@ -415,7 +420,7 @@ export default class MapImageLayer extends AttribLayer {
      * @returns {Boolean} opacity of the layer/sublayer
      */
     getOpacity (layerIdx: number = undefined): number {
-        if (this.isUn(layerIdx) || !this.isDynamic) {
+        if (this.parentIdx(layerIdx) || !this.isDynamic) {
             return this.innerLayer.opacity;
         } else {
             return super.getOpacity(layerIdx);
@@ -431,7 +436,7 @@ export default class MapImageLayer extends AttribLayer {
      * @param {Integer} [layerIdx] targets a layer index to get opacity for. Layer opacity is set if omitted.
      */
     setOpacity (value: number, layerIdx: number = undefined): void {
-        if (this.isUn(layerIdx) || !this.isDynamic) {
+        if (this.parentIdx(layerIdx) || !this.isDynamic) {
             this.innerLayer.opacity = value;
 
             // TODO check our implementation inside MapImageFC. we might need to adjust the opacity value of all the
@@ -442,7 +447,7 @@ export default class MapImageLayer extends AttribLayer {
     }
 
     private needChildErrorCheck(layerIdx: number, methodName: string): void {
-        if (this.isUn(layerIdx)) {
+        if (this.parentIdx(layerIdx)) {
             throw new Error(`Attempted to call ${methodName} on Map Image Layer with no layerIdx specified. This method does not apply to the root layer`);
         }
     }
