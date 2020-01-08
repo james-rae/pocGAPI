@@ -1,166 +1,182 @@
-// this file is like the launcher for testing the pocGAPI.
-// once this becomes a proper library, it will likely get trashed and gapi.ts will become the primary file
-// (we either rename it to main, or do as buildmaster miles commands )
+import { GeoApi, DojoWindow, EsriBundle, InfoBundle, EpsgLookup } from './gapiTypes';
+// import { FakeNewsMapModule } from './fakenewsmap';
+import MapModule from './map/MapModule';
 
-import { GeoApi, DojoWindow, EsriBundle, RampExtentConfig, RampMapConfig } from './gapiTypes';
-import GapiLoader from './gapi';
-import Map from './map/Map';
-import FeatureLayer from './layer/FeatureLayer';
-import GeoJsonLayer from './layer/GeoJsonLayer';
-import MapImageLayer from './layer/MapImageLayer';
+// import agol from './util/agol';
+// import events from './old_events';
 
-const gapiPromise: Promise<GeoApi> = GapiLoader('https://js.arcgis.com/4.14', window);
+import LayerModule from './layer/LayerModule';
+import UtilModule from './util/UtilModule';
 
-gapiPromise.then((gapi: GeoApi) => {
-  console.log('GeoAPI Loaded', gapi);
+// TODO once working, try to use asynch / await keywords
 
-  // const fakeMap = gapi.fakeNewsMaps.makeMap('dirtyDiv');
+/**
+ * Invokes the dojo module loader. Loads a list of modules and returns in an object
+ * @param {Array} modules  Array of arrays. inner arrays contain dojo module path in index 0, the name to call the module in index 1
+ * @param {Object} window  reference to the browser's window
+ * @return {Promise} resolves with a key-value pair object. Keys are module names. Values are the modules.
+ */
+function makeDojoRequests(modules: Array<Array<string>>, window: DojoWindow): Promise<EsriBundle> {
+    return new Promise((resolve, reject) => {
 
-  const esriMapConfig: RampMapConfig = {
-    // basemap: 'topo'
+        // NOTE: do not change the callback to an arrow function since we don't know if
+        // Dojo's require has any expectations of the scope within that function or
+        // does any odd metaprogramming
 
-    extent: {
-      xmax: -5007771.626060756,
-      xmin: -16632697.354854,
-      ymax: 10015875.184845109,
-      ymin: 5022907.964742964,
+        // can't use 'arguments' if we have arrow function. so must leave it as standard notation
+        window.require(modules.map(mod => mod[0]), function () {
+            const esriBundle: EsriBundle = new EsriBundle();
 
-      spatialReference: {
-        wkid: 102100,
-        latestWkid: 3857
-      }
-    },
-    lods: gapi.maps.defaultLODs(gapi.maps.defaultTileSchemas()[1]), // idx 1 = mercator
-    basemaps: [{
-      id: 'esriImagery',
-      tileSchemaId: 'DEFAULT_ESRI_World_AuxMerc_3857',
-      layers: [{
-        layerType: 'esriTile',
-        url: 'http://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer'
-      }]
-    }],
-    initialBasemapId: 'esriImagery'
-  };
+            // iterate over arguments to avoid creating an ugly giant function call
+            // arguments is not an array so we do this the hard way
+            for (let i = 0; i < arguments.length; ++i) {
+                esriBundle[modules[i][1]] = arguments[i];
+            }
+            resolve(esriBundle);
+        });
 
-  const map: Map = gapi.maps.createMap(esriMapConfig, 'dirtyDiv');
+        window.require.on('error', () => reject());
+    });
+}
 
+// essentially sets up the main geoApi module object and initializes all the subcomponents
+function initAll(esriBundle: EsriBundle, window: DojoWindow, epsgLookup: EpsgLookup = undefined): GeoApi {
+    // make explicit object to avoid the question marks in the definition
+    const api: GeoApi = {
+        esriBundle: undefined,
+        maps: undefined,
+        layers: undefined,
+        utils: undefined,
+        fakeNewsMaps: undefined // TODO remove
+    };
+    const infoBundle: InfoBundle = {
+        api,
+        esriBundle,
+        window
+    };
 
-  // ------ feature layer test --------
+    /*
+    api.layer = layer(esriBundle, api);
+    api.legend = legend();
+    api.proj = proj(esriBundle);
+    api.Map = esriMap(esriBundle, api);
+    api.attribs = attribute(esriBundle, api);
+    api.symbology = symbology(esriBundle, api, window);
+    */
 
-  const rampFeatureLayerConfig = {
-    id: 'fancyTest',
-    url: 'http://maps-cartes.ec.gc.ca/arcgis/rest/services/EcoGeo/EcoGeo/MapServer/9',
-    state: {
-      opacity: 0.8
-    },
-    customRenderer: {} // just to chill things out. real ramp will have all properties defaulted and filled in
-  };
+    // api.events = events(); // TODO figure out how this thing will really work in ESRI4 paradigm. might make sense to expose via dev module?
+    // api.agol = agol(esriBundle); // TODO not 100% we are going to support AGOL in R4MP.
 
-  const fancyLayer: FeatureLayer = gapi.layers.createFeatureLayer(rampFeatureLayerConfig);
+    // use of the following `esri` properties/functions are unsupported by ramp team.
+    // they are provided for plugin developers who want to write advanced geo functions
+    // and wish to directly consume the esri api objects AT THEIR OWN RISK !!!  :'O  !!!
 
-  fancyLayer.stateChanged.listen((mahState: string) => { console.log('RESPECT MAH FEATURE STATE: ' + mahState); });
+    // access to the collection of ESRI API classes that geoApi loads for its own use
+    api.esriBundle = esriBundle;
+    api.maps = new MapModule(infoBundle);
+    api.layers = new LayerModule(infoBundle);
+    api.utils = new UtilModule(infoBundle, epsgLookup);
+    // api.fakeNewsMaps = new FakeNewsMapModule(esriBundle); // TODO rem9ove me
 
-  map.addLayer(fancyLayer);
+    // function to load ESRI API classes that geoApi does not auto-load.
+    // param `modules` is an array of arrays, the inner arrays are 2-element consisting
+    // of the official library path as the first element, and the property name in the
+    // result object to assign the class to.
+    // e.g. [['esri/tasks/FindTask', 'findTaskClass'], ['esri/geometry/mathUtils', 'mathUtils']]
+    // return value is object with properties containing the dojo classes defined in the param.
+    // e.g. { findTaskClass: <FindTask Dojo Class>, mathUtils: <mathUtils Dojo Class> }
+    api.dev = {};
+    api.dev.esriLoadApiClasses = (modules: Array<Array<string>>) => makeDojoRequests(modules, window);
+    // TODO test this^. will only be called at runtime via plugins so the typescript return value on makeDojoRequests shouldn't matter (i.e. a request will have modules not in EsriBunlde def)
 
-  fancyLayer.isLayerLoaded().then(() => {
-    // test fun times
-    console.log('saw layer load, attempt attrib load');
-    const attProm = fancyLayer.getAttributes();
-    attProm.then((attResult: any) => {
-      console.log('check out mah attributes', attResult);
+    return api;
+}
+
+// TODO if we find we have more things like epsgLookup that need to be provided at initialization, consider changing the paremeter into an options object
+export default async (esriApiUrl: string, window: DojoWindow, epsgLookup: EpsgLookup = undefined): Promise<GeoApi> => {
+
+    // esriDeps is an array pairing ESRI JSAPI dependencies with their imported names
+    // in esriBundle
+    const esriDeps: Array<Array<string>> = [
+        // TODO add 3D Map for future support?  or keep out for now to avoid extra downloads
+        // TODO validate that we are still using these in our code. Any module not being used should be removed
+
+        // TODO remove these commented things once migration is finished
+        // ['dojo/Deferred', 'Deferred'], // esri4 SHOULD be using promises instead of Deferred's now
+        // ['esri/geometry/ScreenPoint', 'ScreenPoint'], // depreciated. need to find alternative.  Possibly MapView.toScreen()
+        // ['esri/graphicsUtils', 'graphicsUtils'], // depreciated. may need to find alternative, especially for bounding box of graphics
+        // ['esri/widgets/BasemapLayer', 'BasemapLayer'], // depreciated. everything lives within Basemap now
+        // ['esri/widgets/OverviewMap', 'OverviewMap'], // depreciated. we likely need a 2nd MapView, or a separate synched map to do our overview. https://developers.arcgis.com/javascript/latest/sample-code/overview-map/index.html
+
+        ['dojo/query', 'dojoQuery'],
+        ['esri/Basemap', 'Basemap'],
+        ['esri/Color', 'Color'],
+        ['esri/config', 'esriConfig'],
+        ['esri/geometry/Extent', 'Extent'],
+        ['esri/geometry/Multipoint', 'Multipoint'],
+        ['esri/geometry/Point', 'Point'],
+        ['esri/geometry/Polygon', 'Polygon'],
+        ['esri/geometry/Polyline', 'Polyline'],
+        ['esri/geometry/SpatialReference', 'SpatialReference'],
+        ['esri/Graphic', 'Graphic'],
+        ['esri/layers/FeatureLayer', 'FeatureLayer'],
+        ['esri/layers/GraphicsLayer', 'GraphicsLayer'],
+        ['esri/layers/ImageryLayer', 'ImageryLayer'], // formerly known as ArcGISImageServiceLayer
+        ['esri/layers/MapImageLayer', 'MapImageLayer'], // formerly known as ArcGISDynamicMapServiceLayer
+        ['esri/layers/TileLayer', 'TileLayer'], // formerly known as ArcGISTiledMapServiceLayer
+        ['esri/layers/WMSLayer', 'WmsLayer'],
+        ['esri/layers/support/Field', 'Field'],
+        ['esri/layers/support/ImageParameters', 'ImageParameters'],
+        ['esri/layers/support/Sublayer', 'Sublayer'], // formerly known as LayerDrawingOptions
+        ['esri/layers/support/WMSSublayer', 'WMSSublayer'], // formerly known as WMSLayerInfo
+        ['esri/Map', 'Map'],
+        ['esri/renderers/ClassBreaksRenderer', 'ClassBreaksRenderer'],
+        ['esri/renderers/SimpleRenderer', 'SimpleRenderer'],
+        ['esri/renderers/UniqueValueRenderer', 'UniqueValueRenderer'],
+        ['esri/renderers/support/jsonUtils', 'rendererUtils'],
+        ['esri/request', 'esriRequest'],
+        ['esri/symbols/PictureMarkerSymbol', 'PictureMarkerSymbol'],
+        ['esri/symbols/SimpleFillSymbol', 'SimpleFillSymbol'],
+        ['esri/symbols/SimpleLineSymbol', 'SimpleLineSymbol'],
+        ['esri/symbols/SimpleMarkerSymbol', 'SimpleMarkerSymbol'],
+        ['esri/symbols/support/jsonUtils', 'symbolJsonUtils'],
+        ['esri/tasks/GeometryService', 'GeometryService'],
+        ['esri/tasks/IdentifyTask', 'IdentifyTask'],
+        ['esri/tasks/PrintTask', 'PrintTask'],
+        ['esri/tasks/QueryTask', 'QueryTask'],
+        ['esri/tasks/support/IdentifyParameters', 'IdentifyParameters'],
+        ['esri/tasks/support/PrintParameters', 'PrintParameters'],
+        ['esri/tasks/support/PrintTemplate', 'PrintTemplate'],
+        ['esri/tasks/support/ProjectParameters', 'ProjectParameters'],
+        ['esri/tasks/support/Query', 'Query'],
+        ['esri/views/MapView', 'MapView'],
+        ['esri/widgets/BasemapGallery', 'BasemapGallery'],
+        ['esri/widgets/ScaleBar', 'ScaleBar']
+    ];
+
+    // the startup for this module is:
+    // 1. add a script tag to load the API (this typically points to a custom ESRI build)
+    // 2. load all the ESRI and Dojo dependencies `makeDojoRequests()`
+    // 3. initialize all of our modules
+    // everything is done in an async model and the result is a promise which resolves to
+    // a reference to our API
+    await new Promise((resolve, reject) => {
+        if (window.require) {
+            console.warn('ESRI API Load Process: window.require already exists, ' +
+                'attempting to reuse existing loader with no new script tag created');
+            resolve();
+            return;
+        }
+        // TODO try to add types, if we care.
+        const oScript = window.document.createElement('script');
+        const oHead = window.document.head || window.document.getElementsByTagName('head')[0];
+        oScript.type = 'text\/javascript';
+        oScript.onerror = (err: any) => reject(err);
+        oScript.onload = () => resolve();
+        oHead.appendChild(oScript);
+        oScript.src = esriApiUrl;
     });
 
-    const tableAttProm = fancyLayer.getTabularAttributes();
-    tableAttProm.then((tattResult: any) => {
-      console.log('check out mah tabley attributes', tattResult);
-    });
-
-    console.log('check mah feature count', fancyLayer.getFeatureCount());
-
-  });
-
-  // ------ geojson layer test --------
-
-  const rampHappyLayerConfig = {
-    id: 'happyTest',
-    state: {
-      opacity: 0.8
-    },
-    customRenderer: {} // just to chill things out. real ramp will have all properties defaulted and filled in
-  };
-  const happy: string = '{"type": "FeatureCollection","features": [{"type": "Feature","properties": {"name": "Right Eye"},"geometry": {"type": "Polygon","coordinates": [[[-90.3515625,53.73571574532637],[-92.13134765625,53.199451902831555],[-91.29638671875,51.93071827931289],[-88.9453125,51.83577752045248],[-87.71484375,52.96187505907603],[-88.59374999999999,53.68369534495075],[-90.3515625,53.73571574532637]]]}},{"type": "Feature","properties": {"name": "Left Eye"},"geometry": {"type": "Polygon","coordinates": [[[-84.57275390625,53.44880683542759],[-86.0009765625,53.04121304075649],[-85.4296875,51.80861475198521],[-83.408203125,51.41291212935532],[-82.15576171875,52.308478623663355],[-82.90283203125,53.409531853086435],[-84.57275390625,53.44880683542759]]]}},{"type": "Feature","properties": {"name": "Happy Mouth"},"geometry": {"type": "Polygon","coordinates": [[[-92.8125,51.67255514839676],[-91.82373046875,50.499452103967734],[-88.9892578125,50.317408112618686],[-84.44091796875,50.190967765585604],[-82.33154296875,51.04139389812637],[-82.02392578125,49.96535590991311],[-83.60595703125,48.748945343432936],[-85.869140625,48.3416461723746],[-89.296875,48.66194284607008],[-92.021484375,49.05227025601607],[-93.2080078125,49.76707407366792],[-92.8125,51.67255514839676]]]}}]}';
-  const systemMagic = {
-    mapSR: {
-      wkid: 102100
-    }
-  };
-
-  const happyLayer: GeoJsonLayer = gapi.layers.createGeoJSONLayer(rampHappyLayerConfig , happy, systemMagic);
-
-  happyLayer.stateChanged.listen((mahState: string) => { console.log('RESPECT MAH GEOJSON STATE: ' + mahState); });
-
-  map.addLayer(happyLayer);
-
-  happyLayer.isLayerLoaded().then(() => {
-    // test fun times
-    console.log('saw happy layer load, attempt attrib load');
-    const attProm = happyLayer.getAttributes();
-    attProm.then((attResult: any) => {
-      console.log('check out mah happy attributes', attResult);
-    });
-
-    console.log('check mah happy feature count', happyLayer.getFeatureCount());
-
-  });
-
-  // ------ map image layer test --------
-
-  const rampMapImageLayerConfig = {
-    id: 'extraFancyTest',
-    name: 'I was once called Dynamic',
-    layerType: 'esriDynamic', // TODO change this keyvalue?
-    // layerEntries: [{ index: 21 }, { index: 17 }, { index: 19 }],
-    layerEntries: [ { index: 3, state: {} }, { index: 6, state: {} }],
-    state: {
-      opacity: 1,
-      visibility: true
-    },
-    // url: 'http://geoappext.nrcan.gc.ca/arcgis/rest/services/NACEI/energy_infrastructure_of_north_america_en/MapServer'
-    url: 'http://maps-cartes.ec.gc.ca/arcgis/rest/services/EcoGeo/EcoGeo/MapServer'
-  };
-
-  const imgLayer: MapImageLayer = gapi.layers.createMapImageLayer(rampMapImageLayerConfig);
-
-  imgLayer.stateChanged.listen((mahState: string) => { console.log('RESPECT MAH IMAGE STATE: ' + mahState); });
-
-  map.addLayer(imgLayer);
-
-  imgLayer.isLayerLoaded().then(() => {
-    // test fun times
-
-    console.log('saw layer load, attempt attrib load');
-    const attProm = imgLayer.getAttributes(6);
-    attProm.then((attResult: any) => {
-      console.log('check out mah attributes', attResult);
-    });
-
-    const tableAttProm = imgLayer.getTabularAttributes(6);
-    tableAttProm.then((tattResult: any) => {
-      console.log('check out mah tabley attributes', tattResult);
-    });
-
-    console.log('check mah feature count', imgLayer.getFeatureCount(6));
-
-    console.log('merry tree', imgLayer.getLayerTree());
-
-    console.log('have a look at this legend', imgLayer.getLegend(6));
-
-  });
-
-  // ------ random tests --------
-  gapi.utils.symbology.mapServerToLocalLegend('https://section917.canadacentral.cloudapp.azure.com/arcgis/rest/services/CESI/MapServer/').then(legend => {
-    console.log('legend from map server');
-    console.table(legend);
-  });
-
-});
+    const esriBundle = await makeDojoRequests(esriDeps, window);
+    return initAll(esriBundle, window, epsgLookup);
+};
