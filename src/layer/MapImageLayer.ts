@@ -369,16 +369,13 @@ export default class MapImageLayer extends AttribLayer {
     // so for properties that fall into this category, we intercept the common routies, and treat an undefined
     // layerIdx as targeting the layer proper (in other layers, undefined means take the default child)
 
-    parentIdx(layerIdx: number): boolean {
-        // TODO at the moment, we are using -1 as root indicator in the layerTree.
-        return this.isUn(layerIdx) || (layerIdx === -1);
-    }
-
-    getName (layerIdx: number = undefined): string {
-        if (this.parentIdx(layerIdx)) {
+    getName (layerIdx: number | string = undefined): string {
+        const fc = this.getFC(layerIdx, true);
+        if (this.isUn(fc)) {
             return this.name;
         } else {
-            return super.getName(layerIdx);
+            // see comment in getOpacity
+            return super.getName(fc.layerIdx);
         }
     }
 
@@ -389,11 +386,13 @@ export default class MapImageLayer extends AttribLayer {
      * @param {Integer} [layerIdx] targets a layer index to get visibility for. Layer visibility is used if omitted.
      * @returns {Boolean} visibility of the layer/sublayer
      */
-    getVisibility (layerIdx: number = undefined): boolean {
-        if (this.parentIdx(layerIdx)) {
+    getVisibility (layerIdx: number | string = undefined): boolean {
+        const fc = this.getFC(layerIdx, true);
+        if (this.isUn(fc)) {
             return this.innerLayer.visible;
         } else {
-            return super.getVisibility(layerIdx);
+            // see comment in getOpacity
+            return super.getVisibility(fc.layerIdx);
         }
     }
 
@@ -404,11 +403,13 @@ export default class MapImageLayer extends AttribLayer {
      * @param {Boolean} value the new visibility setting
      * @param {Integer} [layerIdx] targets a layer index to set visibility for. Layer visibility is set if omitted.
      */
-    setVisibility (value: boolean, layerIdx: number = undefined): void {
-        if (this.parentIdx(layerIdx)) {
+    setVisibility (value: boolean, layerIdx: number | string = undefined): void {
+        const fc = this.getFC(layerIdx, true);
+        if (this.isUn(fc)) {
             this.innerLayer.visible = value;
         } else {
-            super.setVisibility(value, layerIdx);
+            // see comment in getOpacity
+            super.setVisibility(value, fc.layerIdx);
         }
     }
 
@@ -416,14 +417,21 @@ export default class MapImageLayer extends AttribLayer {
      * Returns the opacity of the layer/sublayer.
      *
      * @function getOpacity
-     * @param {Integer} [layerIdx] targets a layer index to get opacity for. Layer opacity is used if omitted.
+     * @param {Integer | String} [layerIdx] targets a layer index or uid to get opacity for. Layer opacity is used if omitted.
      * @returns {Boolean} opacity of the layer/sublayer
      */
-    getOpacity (layerIdx: number = undefined): number {
-        if (this.parentIdx(layerIdx) || !this.isDynamic) {
+    getOpacity (layerIdx: number | string = undefined): number {
+        const fc = this.getFC(layerIdx, true);
+        if (this.isUn(fc) || !this.isDynamic) {
             return this.innerLayer.opacity;
         } else {
-            return super.getOpacity(layerIdx);
+            // this is a bit redundant / inefficient. we could just do fc.getOpacity()
+            // current rationale is we keep the implementation in the baseclass
+            // (i.e. only one piece of code does the opacity call on the FC, so if we
+            // need to change it only changes in one spot)
+            // can change to more direct (logic in two spots) if we need the efficiency gains.
+            // this will apply to most of othe other things here that are doing "parent or fc"
+            return super.getOpacity(fc.layerIdx);
         }
 
     }
@@ -435,47 +443,17 @@ export default class MapImageLayer extends AttribLayer {
      * @param {Decimal} value the new opacity setting. Valid value is anything between 0 and 1, inclusive.
      * @param {Integer} [layerIdx] targets a layer index to get opacity for. Layer opacity is set if omitted.
      */
-    setOpacity (value: number, layerIdx: number = undefined): void {
-        if (this.parentIdx(layerIdx) || !this.isDynamic) {
+    setOpacity (value: number, layerIdx: number | string = undefined): void {
+        const fc = this.getFC(layerIdx, true);
+        if (this.isUn(fc) || !this.isDynamic) {
             this.innerLayer.opacity = value;
 
             // TODO check our implementation inside MapImageFC. we might need to adjust the opacity value of all the
             //      FCs if we are in the not-dynamic case
         } else {
-            super.setOpacity(value, layerIdx);
+            // see comment in getOpacity
+            super.setOpacity(value, fc.layerIdx);
         }
-    }
-
-    private needChildErrorCheck(layerIdx: number, methodName: string): void {
-        if (this.parentIdx(layerIdx)) {
-            throw new Error(`Attempted to call ${methodName} on Map Image Layer with no layerIdx specified. This method does not apply to the root layer`);
-        }
-    }
-
-    getAttributes (layerIdx: number = undefined): Promise<AttributeSet> {
-        this.needChildErrorCheck(layerIdx, 'getAttributes');
-        return super.getAttributes(layerIdx);
-    }
-
-    abortAttributeLoad (layerIdx: number = undefined): void {
-        this.needChildErrorCheck(layerIdx, 'abortAttributeLoad');
-        return super.abortAttributeLoad(layerIdx);
-    }
-
-    destroyAttributes (layerIdx: number = undefined): void {
-        this.needChildErrorCheck(layerIdx, 'destroyAttributes');
-        return super.destroyAttributes(layerIdx);
-    }
-
-    // formerly known as getFormattedAttributes
-    getTabularAttributes (layerIdx: number = undefined): Promise<AttributeSet> {
-        this.needChildErrorCheck(layerIdx, 'getTabularAttributes');
-        return super.getTabularAttributes(layerIdx);
-    }
-
-    getFeatureCount (layerIdx: number = undefined): number {
-        this.needChildErrorCheck(layerIdx, 'getFeatureCount');
-        return super.getFeatureCount(layerIdx);
     }
 
 }
